@@ -1,4 +1,4 @@
-from hypium import By
+from hypium import BY
 
 
 class SelectDestinationPage:
@@ -12,7 +12,7 @@ class SelectDestinationPage:
 
     def _find_by_text(self, text: str):
         """按文本查找组件。"""
-        return self.driver.find_component(By.text(text))
+        return self.driver.find_component(BY.text(text))
 
     def is_loaded(self) -> bool:
         """判断‘选择旅行目的地’页面是否加载成功。"""

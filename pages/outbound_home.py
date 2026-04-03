@@ -1,4 +1,4 @@
-from hypium import By
+from hypium import BY
 
 
 class OutboundHomePage:
@@ -11,7 +11,7 @@ class OutboundHomePage:
 
     def _find_by_text(self, text: str):
         """按文本查找组件。"""
-        return self.driver.find_component(By.text(text))
+        return self.driver.find_component(BY.text(text))
 
     def tap_region_selector(self):
         """点击首页右上角地区选择器（默认文案：香港）。"""
