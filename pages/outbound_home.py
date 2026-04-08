@@ -6,16 +6,17 @@ from hypium import BY
 class OutboundHomePage:
     """出境服务卡片首页对象。"""
 
+    PAGE_NAME = "OutboundHomePage"
     REGION_DROPDOWN_ID = "109"
 
     def __init__(self, driver: Any) -> None:
         self.driver = driver
 
-    def _find_by_text(self, text: str):
+    def _find_by_text(self, text: str) -> Any | None:
         """按文本查找组件。"""
         return self.driver.find_component(BY.text(text))
 
-    def _find_by_id(self, component_id: str | int):
+    def _find_by_id(self, component_id: str | int) -> Any | None:
         """按组件 ID 查找组件。"""
         return self.driver.find_component(BY.id(str(component_id)))
 
@@ -25,8 +26,8 @@ class OutboundHomePage:
         component = self._find_by_id(component_id)
         if component is None:
             raise RuntimeError(
-                "[OutboundHomePage.tap_region_selector] "
-                f"未找到地区切换下拉按钮，component_id={component_id}"
+                f"[{self.PAGE_NAME}.tap_region_selector] 未找到地区切换下拉按钮，"
+                f"by=id, component_id={component_id}"
             )
         component.click()
 
