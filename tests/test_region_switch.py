@@ -9,7 +9,7 @@ from pages.select_destination import SelectDestinationPage
 @allure.story("切换出境目的地")
 @pytest.mark.parametrize(
     "destination, expected_text",
-    [("澳门", "澳门"), ("台北", "台北"), ("香港", "香港")],
+    [("澳门", "澳门"), ("曼谷", "曼谷"), ("香港", "香港")],
 )
 def test_switch_region(driver, destination: str, expected_text: str) -> None:
     """验证‘切换出境目的地’功能。"""
