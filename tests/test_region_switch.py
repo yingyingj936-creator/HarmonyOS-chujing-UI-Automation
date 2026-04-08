@@ -13,12 +13,12 @@ from pages.select_destination import SelectDestinationPage
 )
 def test_switch_region(driver, destination: str, expected_text: str) -> None:
     """验证‘切换出境目的地’功能。"""
-    allure.dynamic.title(f"从香港切换为{destination}")
+    allure.dynamic.title(f"切换出境目的地为{destination}")
 
     home_page = OutboundHomePage(driver)
     destination_page = SelectDestinationPage(driver)
 
-    with allure.step("步骤一：点击首页右上角地区选择器（香港）"):
+    with allure.step("步骤一：点击首页地区切换下拉按钮"):
         home_page.tap_region_selector()
 
     with allure.step("步骤二：验证跳转到选择旅行目的地页"):
