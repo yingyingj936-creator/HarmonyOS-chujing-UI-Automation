@@ -7,7 +7,7 @@ class OutboundHomePage:
     """出境服务卡片首页对象。"""
 
     PAGE_NAME = "OutboundHomePage"
-    REGION_DROPDOWN_ID = "109"
+    REGION_DROPDOWN_XPATH = '//*[@id="TabHomeCompRoot"]/Column[1]/Column[1]/Row[1]'
 
     def __init__(self, driver: Any) -> None:
         self.driver = driver
@@ -16,18 +16,18 @@ class OutboundHomePage:
         """按文本查找组件。"""
         return self.driver.find_component(BY.text(text))
 
-    def _find_by_id(self, component_id: str | int) -> Any | None:
-        """按组件 ID 查找组件。"""
-        return self.driver.find_component(BY.id(str(component_id)))
+    def _find_by_xpath(self, xpath: str) -> Any | None:
+        """按 XPath 查找组件。"""
+        return self.driver.find_component(BY.xpath(xpath))
 
     def tap_region_selector(self) -> None:
         """点击首页地区切换下拉按钮。"""
-        component_id = self.REGION_DROPDOWN_ID
-        component = self._find_by_id(component_id)
+        xpath = self.REGION_DROPDOWN_XPATH
+        component = self._find_by_xpath(xpath)
         if component is None:
             raise RuntimeError(
                 f"[{self.PAGE_NAME}.tap_region_selector] 未找到地区切换下拉按钮，"
-                f"by=id, component_id={component_id}"
+                f"by=xpath, xpath={xpath}"
             )
         component.click()
 
