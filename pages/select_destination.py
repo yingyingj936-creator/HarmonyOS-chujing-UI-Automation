@@ -6,22 +6,33 @@ from hypium import BY
 class SelectDestinationPage:
     """选择旅行目的地页对象。"""
 
+    """定位元素"""
     PAGE_TITLE_TEXT = "选择旅行目的地"
+
+    # 热门分类
     HOT_CATEGORY_XPATH = (
-        '//*[@id="zycnb"]/NavigationContent[1]/NavDestination[1]/NavDestinationContent[1]/Column[1]/Stack[1]/SideBarContainer[1]/Column[1]/Column[3]'
+        '//SideBarContainer/Column//Text[@text="热门"]'
     )
+    # 港澳分类
     HK_MACAO_CATEGORY_XPATH = (
-        '//*[@id="zycnb"]/NavigationContent[1]/NavDestination[1]/NavDestinationContent[1]/Column[1]/Stack[1]/SideBarContainer[1]/Column[1]/Column[4]'
+        '//SideBarContainer/Column//Text[@text="港澳"]'
     )
+    # 历史分类
     CURRENT_HISTORY_XPATH = (
-        '//*[@id="zycnb"]/NavigationContent[1]/NavDestination[1]/NavDestinationContent[1]/Column[1]/Stack[1]/SideBarContainer[1]/Column[1]/Column[2]'
+        '//SideBarContainer/Column//Text[@text="当前/历史"]'
+    )
+    # 右侧导航条
+    INDEXER_HOT_XPATH = '//AlphabetIndexer//*[@text="热门"]'
+    INDEXER_T_XPATH = '//AlphabetIndexer//*[@text="T"]'
+
+    """断言验证元素定位是否存在"""
+    HOT_SECTION_XPATH = '//ListItemGroup/Text[@text="热门"]'
+    HK_MACAO_SECTION_XPATH = '//ListItemGroup/Text[@text="港澳"]'
+    CURRENT_LOCATION_SECTION_XPATH = (
+        '//ListItemGroup/Text[@text="当前/历史"]'
     )
 
-    HOT_SECTION_XPATH = '//*[@text="热门"]'
-    HK_MACAO_SECTION_XPATH = '//*[@text="港澳"]'
-    CURRENT_LOCATION_SECTION_XPATH = (
-        '//*[@id="zycnb"]/NavigationContent[1]/NavDestination[1]/NavDestinationContent[1]/Column[1]/Stack[1]/SideBarContainer[1]/Row[1]/List[1]/ListItemGroup[1]/Grid[1]/GridItem[1]/Row[1]/Image[1]'
-    )
+
 
     def __init__(self, driver: Any) -> None:
         self.driver = driver
@@ -38,8 +49,14 @@ class SelectDestinationPage:
         """判断‘选择旅行目的地’页面是否加载成功。"""
         return self._find_by_text(self.PAGE_TITLE_TEXT) is not None
 
+    def wait_loaded(self, timeout: float = 8) -> bool:
+        """显式等待页面标题出现。"""
+        return self.driver.wait_for_component(BY.text(self.PAGE_TITLE_TEXT), timeout=timeout)
+
     def choose_destination(self, destination_name: str) -> None:
         """按目的地名称点击对应选项。"""
+        if not self.driver.wait_for_component(BY.text(destination_name), timeout=8):
+            raise AssertionError(f"未找到目的地选项：{destination_name}")
         destination_component = self._find_by_text(destination_name)
         if destination_component is None:
             raise AssertionError(f"未找到目的地选项：{destination_name}")
@@ -47,6 +64,8 @@ class SelectDestinationPage:
 
     def tap_by_xpath(self, xpath: str, action_name: str) -> None:
         """点击指定 xpath 组件。"""
+        if not self.driver.wait_for_component(BY.xpath(xpath), timeout=8):
+            raise AssertionError(f"未找到可点击元素（{action_name}），xpath：{xpath}")
         target_component = self._find_by_xpath(xpath)
         if target_component is None:
             raise AssertionError(f"未找到可点击元素（{action_name}），xpath：{xpath}")
@@ -58,8 +77,7 @@ class SelectDestinationPage:
 
     def is_element_displayed_by_xpath(self, xpath: str, action_name: str) -> bool:
         """判断断言目标 xpath 对应组件是否已展示。"""
-        is_displayed = self.is_xpath_displayed(xpath)
-        if not is_displayed:
+        if not self.driver.wait_for_component(BY.xpath(xpath), timeout=8):
             raise AssertionError(f"未找到断言元素（{action_name}），xpath：{xpath}")
         return True
 
@@ -88,3 +106,7 @@ class SelectDestinationPage:
         return self.is_element_displayed_by_xpath(
             self.CURRENT_LOCATION_SECTION_XPATH, "当前/历史"
         )
+
+    def swipe_to_back(self):
+        """从屏幕左边缘向右侧滑返回"""
+        self.driver.swipe('RIGHT', 100)

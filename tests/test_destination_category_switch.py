@@ -1,5 +1,4 @@
 import allure
-
 from pages.outbound_home import OutboundHomePage
 from pages.select_destination import SelectDestinationPage
 
@@ -13,7 +12,7 @@ def test_destination_category_switch_flow(driver) -> None:
 
     with allure.step("步骤一：进入选择目的地页"):
         home_page.tap_region_selector()
-        assert destination_page.is_loaded(), "未进入‘选择旅行目的地’页面"
+        assert destination_page.wait_loaded(timeout=8), "未进入‘选择旅行目的地’页面"
 
     with allure.step("步骤二：点击热门分类，并校验热门地区列表展示"):
         destination_page.tap_hot_category()
@@ -30,3 +29,8 @@ def test_destination_category_switch_flow(driver) -> None:
         assert destination_page.is_current_location_section_displayed(), (
             "点击‘当前/历史’后未展示当前定位地区区域"
         )
+    # with allure.step("步骤五：侧滑返回首页"):
+    #     # 执行侧滑动作
+    #     destination_page.swipe_to_back()
+    #     time.sleep(1)
+
