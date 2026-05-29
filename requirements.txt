@@ -1,3 +1,4 @@
 pytest
 hypium
 allure-pytest
+Pillow
