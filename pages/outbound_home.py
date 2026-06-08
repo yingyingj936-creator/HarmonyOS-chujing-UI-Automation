@@ -146,6 +146,6 @@ class OutboundHomePage:
         逻辑：判断首页特有的、唯一的组件是否存在。
         """
         try:
-            return self.driver.find_component(BY.xpath(self.BOTTOM_HOME_TAB_XPATH)) is not None
+            return self.driver.find_component(BY.xpath(self.SEARCH_BAR_XPATH)) is not None
         except Exception:
             return False

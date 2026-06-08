@@ -1,5 +1,5 @@
 [app]
-target_device = "172.20.10.9:5555"
+target_device = "172.16.129.157:5555"
 bundle = "com.atomicservice.5765880207855877209"
 ability = "EntryAbility"
 
