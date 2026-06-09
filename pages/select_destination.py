@@ -8,23 +8,25 @@ class SelectDestinationPage:
 
     """定位元素"""
     PAGE_TITLE_TEXT = "选择旅行目的地"
+    BACK_BUTTON_XPATH = '//Row[./Text[@text="选择旅行目的地"]]/Row[./Image]'
 
     # 热门分类
     HOT_CATEGORY_XPATH = (
-        '//SideBarContainer/Column//Text[@text="热门"]'
+        '//SideBarContainer/Column//Column[./Text[@text="热门"]]'
     )
-    # 港澳分类
-    HK_MACAO_CATEGORY_XPATH = (
-        '//SideBarContainer/Column//Text[@text="港澳"]'
+    # 东南亚分类
+    SOUTHEAST_ASIA_CATEGORY_XPATH = (
+        '//SideBarContainer/Column//Column[./Text[@text="东南亚"]]'
     )
     # 历史分类
     CURRENT_HISTORY_XPATH = (
-        '//SideBarContainer/Column//Text[@text="当前/历史"]'
+        '//SideBarContainer/Column//Column[./Text[@text="当前/历史"]]'
     )
+    LETTER_G_XPATH = '//AlphabetIndexer//Text[@text="G"]'
 
     """断言验证元素定位是否存在"""
     HOT_SECTION_XPATH = '//ListItemGroup/Text[@text="热门"]'
-    HK_MACAO_SECTION_XPATH = '//ListItemGroup/Text[@text="港澳"]'
+    SOUTHEAST_ASIA_SECTION_XPATH = '//ListItemGroup/Text[@text="马来西亚"]'
     CURRENT_LOCATION_SECTION_XPATH = (
         '//ListItemGroup/Text[@text="当前/历史"]'
     )
@@ -76,21 +78,31 @@ class SelectDestinationPage:
         """点击左侧‘热门’分类。"""
         self.tap_by_xpath(self.HOT_CATEGORY_XPATH, "热门")
 
-    def tap_hk_macao_category(self) -> None:
-        """点击左侧‘港澳’分类。"""
-        self.tap_by_xpath(self.HK_MACAO_CATEGORY_XPATH, "港澳")
+    def tap_southeast_asia_category(self) -> None:
+        """点击左侧‘东南亚’分类。"""
+        self.tap_by_xpath(self.SOUTHEAST_ASIA_CATEGORY_XPATH, "东南亚")
 
     def tap_first_current_history_entry(self) -> None:
         """点击左侧第一个‘当前/历史’入口。"""
         self.tap_by_xpath(self.CURRENT_HISTORY_XPATH, "当前/历史")
 
+    def tap_letter_g(self) -> None:
+        """点击右侧字母导航条‘G’。"""
+        self.tap_by_xpath(self.LETTER_G_XPATH, "字母导航 G")
+
+    def tap_back_button(self) -> None:
+        """点击页面内左上角返回按钮。"""
+        self.tap_by_xpath(self.BACK_BUTTON_XPATH, "页面内返回按钮")
+
     def is_hot_section_displayed(self) -> bool:
         """是否展示热门地区列表。"""
         return self.is_element_displayed_by_xpath(self.HOT_SECTION_XPATH, "热门")
 
-    def is_hk_macao_section_displayed(self) -> bool:
-        """是否展示港澳地区列表。"""
-        return self.is_element_displayed_by_xpath(self.HK_MACAO_SECTION_XPATH, "港澳")
+    def is_southeast_asia_section_displayed(self) -> bool:
+        """是否展示东南亚地区列表。"""
+        return self.is_element_displayed_by_xpath(
+            self.SOUTHEAST_ASIA_SECTION_XPATH, "东南亚"
+        )
 
     def is_current_location_section_displayed(self) -> bool:
         """是否展示当前定位地区区域。"""

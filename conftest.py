@@ -11,11 +11,12 @@ from pages.outbound_home import OutboundHomePage
 FILE_ORDER = {
     "test_home_first_screen.py": 1,
     "test_bottom_navigation.py": 2,
-    "test_region_switch.py": 3,
-    "test_destination_category_switch.py": 4,
-    "test_search_flow.py": 5,
-    "test_add_trip.py": 6,
-    "test_collection_posts.py": 7,
+    "test_destination_selector_browse.py": 3,
+    "test_destination_switch_refresh.py": 4,
+    "test_search_scope_by_destination.py": 5,
+    "test_search_flow.py": 6,
+    "test_add_trip.py": 7,
+    "test_collection_posts.py": 8,
 }
 
 

@@ -8,7 +8,15 @@ class OutboundHomePage:
     """出境服务卡片首页对象。"""
 
     PAGE_NAME = "OutboundHomePage"
-    REGION_DROPDOWN_XPATH = '//*[@id="TabHomeCompRoot"]//Row[./Text[@text="中国香港"]]'
+    REGION_DROPDOWN_XPATH_TEMPLATE = (
+        '//*[@id="TabHomeCompRoot"]//Row[./Text[@text="{region_text}"]]'
+    )
+    REGION_DROPDOWN_XPATH = REGION_DROPDOWN_XPATH_TEMPLATE.format(
+        region_text="中国香港"
+    )
+    REGION_SELECTOR_XPATH = (
+        '//*[@id="TabHomeCompRoot"]/Column[1]/Column[1]/Column[1]/Row[1]'
+    )
     HOME_ROOT_XPATH = '//*[@id="TabHomeCompRoot"]'
     SEARCH_BAR_TEXT = "搜索服务、地图、帖子"
     SEARCH_BAR_XPATH = '//*[@text="搜索服务、地图、帖子"]'
@@ -39,6 +47,11 @@ class OutboundHomePage:
     def _wait_by_xpath(self, xpath: str, timeout: float) -> bool:
         return self.driver.wait_for_component(BY.xpath(xpath), timeout=timeout)
 
+    @classmethod
+    def region_dropdown_xpath(cls, region_text: str) -> str:
+        """生成首页左上角目的地入口 XPath。"""
+        return cls.REGION_DROPDOWN_XPATH_TEMPLATE.format(region_text=region_text)
+
     def wait_first_screen_loaded(self, timeout: float = 5) -> bool:
         """
         首页首屏加载判定（总超时）。
@@ -68,27 +81,21 @@ class OutboundHomePage:
             and self._wait_by_xpath(self.HOT_ROUTES_SECTION_XPATH, timeout)
         )
 
-    def tap_region_selector(self) -> None:
+    def tap_region_selector(self, region_text: str | None = None) -> None:
         """点击首页地区切换下拉按钮。"""
-        xpath = self.REGION_DROPDOWN_XPATH
+        xpath = self.REGION_SELECTOR_XPATH
         if not self._wait_by_xpath(xpath, timeout=8):
             raise RuntimeError(
                 f"[{self.PAGE_NAME}.tap_region_selector] 未找到地区切换下拉按钮，"
-                f"by=xpath, xpath={xpath}"
+                f"by=xpath, xpath={xpath}, current_region={region_text}"
             )
         component = self._find_by_xpath(xpath)
         if component is None:
             raise RuntimeError(
-                f"[{self.PAGE_NAME}.tap_region_selector] 未找到地区切换下拉按钮，"
-                f"by=xpath, xpath={xpath}"
+                f"[{self.PAGE_NAME}.tap_region_selector] 地区切换下拉按钮定位失败，"
+                f"by=xpath, xpath={xpath}, current_region={region_text}"
             )
         component.click()
-
-    def has_region_text(self, region_text: str, timeout: float = 0) -> bool:
-        """校验首页地区选择器文案是否已更新。"""
-        if timeout > 0:
-            return self._wait_by_text(region_text, timeout=timeout)
-        return self._find_by_text(region_text) is not None
 
     def wait_loaded(self, timeout: float = 8) -> bool:
         """等待首页标识元素出现。"""
