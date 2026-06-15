@@ -1,34 +1,22 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
-from uuid import uuid4
 
 import allure
 from PIL import Image, ImageDraw
 
 
-ARTIFACT_DIR = Path("reports") / "allure_visual"
-
-
-def _make_artifact_path(prefix: str, suffix: str = "png") -> Path:
-    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    return ARTIFACT_DIR / f"{prefix}_{uuid4().hex}.{suffix}"
-
-
-def _attach_png(path: Path, name: str) -> None:
-    allure.attach.file(
-        str(path),
+def _attach_image(image: Image.Image, name: str) -> None:
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    allure.attach(
+        buffer.getvalue(),
         name=name,
         attachment_type=allure.attachment_type.PNG,
     )
-
-
-def _jpeg_to_png(jpeg_path: Path, prefix: str) -> Path:
-    png_path = _make_artifact_path(prefix, "png")
-    with Image.open(jpeg_path) as img:
-        img.save(png_path, format="PNG")
-    return png_path
 
 
 def _to_rect_tuple(bounds: Any) -> tuple[int, int, int, int]:
@@ -52,13 +40,15 @@ def _to_rect_tuple(bounds: Any) -> tuple[int, int, int, int]:
     raise ValueError(f"Unsupported bounds type: {type(bounds)}")
 
 
-def attach_fullscreen(driver: Any, name: str) -> Path:
+def attach_fullscreen(driver: Any, name: str) -> None:
     """Capture current screen and attach it to Allure."""
-    raw_jpeg_path = _make_artifact_path("full_raw", "jpeg")
-    saved_jpeg_path = Path(driver.capture_screen(str(raw_jpeg_path), in_pc=True))
-    full_png_path = _jpeg_to_png(saved_jpeg_path, "full")
-    _attach_png(full_png_path, name)
-    return full_png_path
+    with TemporaryDirectory() as temp_dir:
+        raw_jpeg_path = Path(temp_dir) / "fullscreen.jpeg"
+        saved_jpeg_path = Path(
+            driver.capture_screen(str(raw_jpeg_path), in_pc=True)
+        )
+        with Image.open(saved_jpeg_path) as image:
+            _attach_image(image, name)
 
 
 def assert_visible_and_attach_highlight(
@@ -77,36 +67,39 @@ def assert_visible_and_attach_highlight(
     1) full screenshot with highlighted rectangle
     2) optional cropped screenshot of target component
     """
-    if not driver.wait_for_component(selector, timeout=timeout):
+    component = driver.wait_for_component(selector, timeout=timeout)
+    if component is None:
         attach_fullscreen(driver, f"{name}-未找到-全屏")
         raise AssertionError(f"未找到组件：{name}")
 
-    component = driver.find_component(selector)
-    if component is None:
-        attach_fullscreen(driver, f"{name}-定位失败-全屏")
-        raise AssertionError(f"定位组件失败：{name}")
-
-    full_raw_jpeg_path = _make_artifact_path("raw", "jpeg")
-    saved_raw_jpeg_path = Path(driver.capture_screen(str(full_raw_jpeg_path), in_pc=True))
-
     left, top, right, bottom = _to_rect_tuple(component.getBounds())
-    with Image.open(saved_raw_jpeg_path) as img:
-        draw = ImageDraw.Draw(img)
-        l = max(0, left - margin)
-        t = max(0, top - margin)
-        r = min(img.width - 1, right + margin)
-        b = min(img.height - 1, bottom + margin)
-        draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
-        marked_path = _make_artifact_path("marked")
-        img.save(marked_path)
-
-    _attach_png(marked_path, f"{name}-圈选")
-
-    if attach_crop:
-        crop_jpeg_path = _make_artifact_path("crop", "jpeg")
-        saved_crop_jpeg_path = Path(
-            driver.capture_screen(str(crop_jpeg_path), in_pc=True, area=component)
+    with TemporaryDirectory() as temp_dir:
+        full_raw_jpeg_path = Path(temp_dir) / "fullscreen.jpeg"
+        saved_raw_jpeg_path = Path(
+            driver.capture_screen(
+                str(full_raw_jpeg_path),
+                in_pc=True,
+            )
         )
-        crop_png_path = _jpeg_to_png(saved_crop_jpeg_path, "crop")
-        _attach_png(crop_png_path, f"{name}-局部")
+        with Image.open(saved_raw_jpeg_path) as raw_image:
+            marked_image = raw_image.convert("RGB")
+            draw = ImageDraw.Draw(marked_image)
+            l = max(0, left - margin)
+            t = max(0, top - margin)
+            r = min(marked_image.width - 1, right + margin)
+            b = min(marked_image.height - 1, bottom + margin)
+            draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
+            _attach_image(marked_image, f"{name}-圈选")
+
+        if attach_crop:
+            crop_jpeg_path = Path(temp_dir) / "crop.jpeg"
+            saved_crop_jpeg_path = Path(
+                driver.capture_screen(
+                    str(crop_jpeg_path),
+                    in_pc=True,
+                    area=component,
+                )
+            )
+            with Image.open(saved_crop_jpeg_path) as crop_image:
+                _attach_image(crop_image, f"{name}-局部")
     return component

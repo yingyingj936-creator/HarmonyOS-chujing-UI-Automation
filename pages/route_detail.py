@@ -1,25 +1,21 @@
-from typing import Any
-from hypium import BY
+from pages.base_page import BasePage
 
-class RouteDetailPage:
+
+class RouteDetailPage(BasePage):
+    """搜索结果中的路线详情页。"""
+
     PAGE_NAME = "RouteDetailPage"
+    OVERVIEW_TITLE_XPATH_TEMPLATE = '//Text[@text="{route_name}·概览"]'
+    BACK_BUTTON_XPATH = (
+        '//*[@id="mapPageRoot"]//Row[@clickable="true" and ./Image]'
+    )
 
-    def __init__(self, driver: Any) -> None:
-        self.driver = driver
+    @classmethod
+    def overview_title_xpath(cls, route_name: str) -> str:
+        return cls.OVERVIEW_TITLE_XPATH_TEMPLATE.format(
+            route_name=route_name,
+        )
 
-    def tap_add_to_my_trip(self) -> None:
-        """点击‘加入我的行程’"""
-        if not self.driver.wait_for_component(BY.text("加入我的行程"), timeout=8):
-            raise RuntimeError(f"[{self.PAGE_NAME}] 未找到‘加入我的行程’文本按钮")
-        component = self.driver.find_component(BY.text("加入我的行程"))
-        if not component:
-            raise RuntimeError(f"[{self.PAGE_NAME}] 未找到‘加入我的行程’文本按钮")
-        component.click()
-
-    def tap_create_and_add(self) -> None:
-        """点击‘创建并添加’"""
-        # 弹窗通常需要显式等待
-        if self.driver.wait_for_component(BY.text("创建并添加"), timeout=5):
-            self.driver.find_component(BY.text("创建并添加")).click()
-        else:
-            raise RuntimeError(f"[{self.PAGE_NAME}] 等待‘创建并添加’文本超时")
+    def tap_back_button(self) -> None:
+        """点击路线详情页左上角页面内返回按钮。"""
+        self.tap_xpath(self.BACK_BUTTON_XPATH, "路线详情页返回按钮")

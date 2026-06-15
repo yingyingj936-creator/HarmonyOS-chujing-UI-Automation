@@ -11,6 +11,7 @@ class AppSettings:
     target_device: str
     bundle: str
     ability: str
+    default_destination: str = "中国香港"
     startup_wait_seconds: float = 4.0
     cleanup_back_steps: int = 4
     cleanup_back_interval_seconds: float = 1.0
@@ -59,6 +60,7 @@ def load_settings(
         target_device=resolved_target_device,
         bundle=resolved_bundle,
         ability=resolved_ability,
+        default_destination=str(app_cfg.get("default_destination", "中国香港")),
         startup_wait_seconds=float(run_cfg.get("startup_wait_seconds", 4.0)),
         cleanup_back_steps=int(run_cfg.get("cleanup_back_steps", 4)),
         cleanup_back_interval_seconds=float(

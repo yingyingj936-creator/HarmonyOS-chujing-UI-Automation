@@ -12,31 +12,31 @@ from utils.allure_visual import assert_visible_and_attach_highlight
 @dataclass(frozen=True)
 class DestinationRefreshCase:
     destination: str
-    home_post_keyword: str
+    home_post_id: str
     nearby_region_text: str
 
 
 DESTINATION_CASES = (
     DestinationRefreshCase(
         destination="中国澳门",
-        home_post_keyword="澳门发财车全攻略",
+        home_post_id="2027204543522172929",
         nearby_region_text="中国澳门",
     ),
     DestinationRefreshCase(
         destination="温哥华",
-        home_post_keyword="从美国来温哥华 local带我吃的20家店",
+        home_post_id="2059534669958012934",
         nearby_region_text="温哥华",
     ),
     DestinationRefreshCase(
         destination="中国香港",
-        home_post_keyword="首次办理港澳通行证攻略",
+        home_post_id="1961062286607056896",
         nearby_region_text="中国香港",
     ),
 )
 
 
-def _post_title_xpath(keyword: str) -> str:
-    return f'//*[contains(@text, "{keyword}")]'
+def _post_cover_xpath(post_id: str) -> str:
+    return f'//*[@id="{post_id}"]'
 
 
 def _nearby_region_xpath(region_text: str) -> str:
@@ -73,7 +73,7 @@ def test_destination_switch_refresh_home_and_nearby(driver) -> None:
             )
             assert_visible_and_attach_highlight(
                 driver,
-                BY.xpath(_post_title_xpath(case.home_post_keyword)),
+                BY.xpath(_post_cover_xpath(case.home_post_id)),
                 f"首页瀑布流第一篇帖子-{case.destination}",
                 timeout=8,
                 attach_crop=False,

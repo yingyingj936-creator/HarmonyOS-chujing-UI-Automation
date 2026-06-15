@@ -1,11 +1,12 @@
 [app]
-target_device = "172.16.129.157:5555"
+target_device = "auto"
 bundle = "com.atomicservice.5765880207855877209"
 ability = "EntryAbility"
+default_destination = "中国香港"
 
 [runtime]
 startup_wait_seconds = 4.0
-cleanup_back_steps = 4
+cleanup_back_steps = 10
 cleanup_back_interval_seconds = 1.0
 
 [execution]

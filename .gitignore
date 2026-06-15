@@ -1,0 +1,11 @@
+.venv/
+.idea/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+reports/
+tmp_hypium/
+allure-report/
+
+*.log

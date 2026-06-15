@@ -4,12 +4,12 @@ pipeline {
     environment {
         // 显式指定 HDC 路径，防止 Jenkins 找不到命令
         HDC_EXE = "D:\\Hdc\\toolchains-windows-x64-5.1.0.56-Beta1\\toolchains\\hdc.exe"
-        // 你的无线设备 IP 和端口
-        TARGET_IP = "172.16.130.172:5555"
+        // 仅连接一台 USB 设备时使用 auto；多台设备时填写 USB 序列号
+        TARGET_DEVICE = "auto"
         // 虚拟环境中的 Python 路径 (Win11 虚拟环境通常在 Scripts 下)
         VENV_PYTHON = "${WORKSPACE}\\.venv\\Scripts\\python.exe"
         // Allure 原始数据目录
-        ALLURE_RESULTS = "reports"
+        ALLURE_RESULTS = "reports\\allure-results"
     }
 
     stages {
@@ -24,12 +24,10 @@ pipeline {
             }
         }
 
-        stage('无线设备连接') {
+        stage('USB 设备检查') {
             steps {
                 bat """
-                    echo "正在连接 HarmonyOS 设备: ${TARGET_IP}"
-                    "${HDC_EXE}" tconn ${TARGET_IP}
-                    timeout /t 5
+                    echo "正在检查 USB HarmonyOS 设备..."
                     "${HDC_EXE}" list targets
                 """
             }
@@ -54,7 +52,7 @@ pipeline {
                 // 运行 pytest
                 // --clean-alluredir 确保每次报告都是全新的，不会包含上一次运行的干扰数据
                 bat """
-                    "${VENV_PYTHON}" -m pytest tests/ --alluredir=${ALLURE_RESULTS} --clean-alluredir
+                    "${VENV_PYTHON}" -m pytest tests/ --device=${TARGET_DEVICE} --alluredir=${ALLURE_RESULTS} --clean-alluredir
                 """
             }
         }
@@ -64,9 +62,6 @@ pipeline {
         always {
             // 生成 Allure 报告 (Jenkins 会自动把 reports 下的 json 转为可视化图表)
             allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
-            
-            // 结束后断开连接，释放资源
-            bat "\"${HDC_EXE}\" tdisconn ${TARGET_IP}"
         }
     }
 }
