@@ -1,0 +1,105 @@
+import allure
+from hypium import BY
+
+from pages.outbound_home import OutboundHomePage
+from pages.route_detail import RouteDetailPage
+from utils.allure_visual import assert_visible_and_attach_highlight
+
+
+ROUTE_NAME = "香港逛吃两日游"
+
+
+@allure.feature("首页热门路线")
+@allure.story("多日路线第1天POI详情")
+def test_home_hot_route_day1_poi_detail(driver) -> None:
+    """验证多日路线第1天列表进入POI详情后，核心信息完整展示并可关闭返回。"""
+    home = OutboundHomePage(driver)
+    route_detail = RouteDetailPage(driver)
+
+    with allure.step("前置条件：普通用户进入“香港逛吃两日游”详情页，并切换到第1天视图"):
+        home.restore_top(max_swipes=12)
+        home.tap_hot_route_card(ROUTE_NAME)
+        route_detail.wait_loaded(ROUTE_NAME, timeout=15)
+        route_detail.tap_day_1_tab(timeout=10)
+        route_detail.wait_day_1_route_list(timeout=10)
+
+    with allure.step("步骤1：查看“第1天”tab下地图背景"):
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.MAP_VIEW_XPATH),
+            "第1天地图背景，展示第1天路线",
+            timeout=8,
+            attach_crop=False,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.DAY_1_SELECTED_TAB_XPATH),
+            "第1天tab已高亮",
+            timeout=8,
+            attach_crop=False,
+        )
+
+    with allure.step("步骤2：查看“第1天”tab下卡片陈列，校验POI顺序、简介和相邻地点距离"):
+        route_detail.wait_day_1_route_list(timeout=10)
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.DAY_1_FIRST_POI_CARD_XPATH),
+            "第1天第1个POI卡片，展示名称和简介缩略内容",
+            timeout=8,
+            attach_crop=False,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.DAY_1_DISTANCE_TO_SECOND_XPATH),
+            "第1天相邻地点距离和预计出行时间",
+            timeout=8,
+            attach_crop=False,
+        )
+
+    with allure.step("步骤3：点击“第1天”tab下POI点，校验POI详情信息和底部操作区"):
+        route_detail.tap_day_1_first_poi(timeout=10)
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.POI_DETAIL_HEADER_XPATH),
+            "POI详情标题和英文名",
+            timeout=8,
+            attach_crop=False,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.POI_DETAIL_ROOT_XPATH),
+            "POI详情卡片，包含标签、评分、图集、简介、游玩tips、添加到我的行程和周边推荐",
+            timeout=8,
+            attach_crop=False,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.POI_DETAIL_FAVORITE_BUTTON_XPATH),
+            "POI详情底部收藏按钮",
+            timeout=8,
+            attach_crop=False,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.POI_DETAIL_NAVIGATION_XPATH),
+            "POI详情底部导航入口",
+            timeout=8,
+            attach_crop=False,
+        )
+
+    with allure.step("步骤4：点击右上角叉号，退出POI详情并回到第1天列表"):
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.POI_DETAIL_CLOSE_XPATH),
+            "POI详情右上角关闭按钮",
+            timeout=8,
+            attach_crop=False,
+        )
+        route_detail.close_day_1_poi_detail(timeout=10)
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(route_detail.DAY_1_FIRST_POI_CARD_XPATH),
+            "关闭POI详情后回到第1天POI列表",
+            timeout=8,
+            attach_crop=False,
+        )
