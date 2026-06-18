@@ -14,28 +14,34 @@ from pages.select_destination import SelectDestinationPage
 
 FILE_ORDER = {
     "test_home_first_screen.py": 1,
-    "test_home_waterfall_categories.py": 2,
-    "test_home_waterfall_pagination.py": 3,
-    "test_home_service_tabs.py": 4,
-    "test_taxi_service_entry.py": 5,
-    "test_scenic_youtube_entries.py": 6,
-    "test_local_service_categories.py": 7,
-    "test_local_service_search.py": 8,
-    "test_food_ordering_categories.py": 9,
-    "test_food_ordering_search.py": 10,
-    "test_multitask_management.py": 11,
-    "test_multitask_return_home.py": 12,
-    "test_bottom_navigation.py": 13,
-    "test_destination_selector_browse.py": 14,
-    "test_destination_switch_refresh.py": 15,
-    "test_search_scope_by_destination.py": 16,
-    "test_search_start_page_interactions.py": 17,
-    "test_poi_add_to_trip.py": 18,
-    "test_favorite_poi_from_ranking.py": 19,
+    "test_bottom_navigation.py": 2,
+    "test_home_waterfall_categories.py": 3,
+    "test_home_waterfall_pagination.py": 4,
+    "test_home_post_detail_browsing.py": 5,
+    "test_home_hot_route_detail.py": 6,
+    "test_home_hot_route_itinerary_tabs.py": 7,
+    "test_home_hot_route_overview_card.py": 8,
+    "test_home_service_tabs.py": 9,
+    "test_taxi_service_entry.py": 10,
+    "test_scenic_youtube_entries.py": 11,
+    "test_local_service_categories.py": 12,
+    "test_local_service_search.py": 13,
+    "test_food_ordering_categories.py": 14,
+    "test_food_ordering_search.py": 15,
+    "test_search_start_page_interactions.py": 16,
+    "test_search_scope_by_destination.py": 17,
+    "test_search_result_groups.py": 18,
+    "test_poi_add_to_trip.py": 19,
     "test_poi_hotel_booking_and_navigation.py": 20,
     "test_poi_recommendation_post.py": 21,
-    "test_clear_search_history.py": 22,
-    "test_search_result_groups.py": 23,
+    "test_favorite_poi_from_ranking.py": 22,
+    "test_home_guide_like_persistence.py": 23,
+    "test_home_post_favorite_collection.py": 24,
+    "test_multitask_management.py": 25,
+    "test_multitask_return_home.py": 26,
+    "test_destination_selector_browse.py": 27,
+    "test_destination_switch_refresh.py": 28,
+    "test_clear_search_history.py": 29,
 }
 
 
@@ -210,10 +216,50 @@ def _restore_default_destination(driver, settings: AppSettings) -> bool:
 
 
 def _prepare_home(driver, settings: AppSettings) -> bool:
-    return _return_to_home(driver, settings) and _restore_default_destination(
-        driver,
-        settings,
-    )
+    if not _return_to_home(driver, settings):
+        return False
+    if not _restore_home_top(driver):
+        return False
+    if not _restore_default_destination(driver, settings):
+        return False
+    return _restore_home_top(driver)
+
+
+def _restore_home_top(driver) -> bool:
+    """回到首页后统一恢复到顶部，避免上个用例的滚动位置污染金刚区/目的地用例。"""
+    home = OutboundHomePage(driver)
+    try:
+        if not home.wait_loaded(timeout=3):
+            return False
+        home.restore_top(max_swipes=18)
+        return True
+    except RuntimeError:
+        return False
+
+
+@pytest.fixture
+def restart_outbound_service(driver, app_settings: AppSettings):
+    """强制结束出境服务进程后重新启动，并确认回到首页。"""
+
+    def restart() -> None:
+        subprocess.run(
+            [
+                _hdc_executable(),
+                "-t",
+                app_settings.target_device,
+                "shell",
+                "aa",
+                "force-stop",
+                app_settings.bundle,
+            ],
+            check=True,
+        )
+        time.sleep(1)
+        _start_outbound_service(app_settings)
+        if not _prepare_home(driver, app_settings):
+            raise RuntimeError("杀掉进程并重启后未能回到出境服务首页")
+
+    return restart
 
 
 @pytest.fixture(scope="function", autouse=True)

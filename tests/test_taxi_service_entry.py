@@ -14,6 +14,7 @@ def test_taxi_service_entry_and_uber_navigation(driver) -> None:
     taxi_page = TaxiServicePage(driver)
 
     with allure.step("步骤1：查看首页金刚区入口"):
+        home.ensure_kingkong_first_page()
         for entry_name in ("乘车码", "打车", "境外上网"):
             home.wait_xpath(
                 f'{home.HOME_RECOMMENDS_SECTION_XPATH}'

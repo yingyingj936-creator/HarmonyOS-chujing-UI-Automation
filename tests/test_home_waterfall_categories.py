@@ -16,6 +16,8 @@ def test_home_waterfall_category_switching(driver) -> None:
     home = OutboundHomePage(driver)
 
     try:
+        home.select_guide_category("发现")
+
         with allure.step("步骤1：查看首页攻略分类栏，默认显示发现瀑布流"):
             initial_post_ids = home.scroll_to_waterfall()
             for tab_name in CATEGORY_TABS[:-1]:
@@ -60,4 +62,7 @@ def test_home_waterfall_category_switching(driver) -> None:
                 attach_crop=False,
             )
     finally:
-        home.restore_top()
+        try:
+            home.select_guide_category("发现")
+        finally:
+            home.restore_top()

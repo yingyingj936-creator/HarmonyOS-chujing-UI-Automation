@@ -39,6 +39,8 @@ class PoiDetailPage(BasePage):
     MAP_START_NAVIGATION_XPATH = (
         '//Button[@id="direction_routes_result_start_navigation_button"]'
     )
+    MAP_ROUTE_PANEL_XPATH = '//Text[@text="路线"]'
+    PETAL_MAP_MARK_XPATH = '//Text[@text="花瓣地图"]'
     RECOMMENDATION_TITLE_XPATH = '//Text[@text="相关推荐"]'
     RECOMMENDATION_LIST_XPATH = (
         '//*[@id="discovery_list_poidetail"]'

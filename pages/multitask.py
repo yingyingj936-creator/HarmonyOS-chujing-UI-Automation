@@ -116,11 +116,15 @@ class MultiTaskPage(BasePage):
         return tuple(titles)
 
     def _swipe_task_list(self, direction: str) -> None:
-        scroll = self.wait_xpath(
-            self.TASK_SCROLL_XPATH,
-            "多任务滚动列表",
-            timeout=3,
-        )
+        scroll = self.find_xpath(self.TASK_SCROLL_XPATH)
+        if scroll is None and self.find_xpath(self.HOME_CARD_XPATH) is not None:
+            return
+        if scroll is None:
+            scroll = self.wait_xpath(
+                self.TASK_SCROLL_XPATH,
+                "multitask scroll list",
+                timeout=3,
+            )
         self.driver.swipe(direction, distance=75, area=scroll)
         time.sleep(0.5)
 
@@ -216,9 +220,10 @@ class MultiTaskPage(BasePage):
         raise RuntimeError(f"[{self.PAGE_NAME}] 未找到一键清除按钮")
 
     def tap_home_card(self) -> None:
-        """点击固定的出境服务首页任务卡片。"""
-        self.scroll_to_top()
-        self.tap_xpath(self.HOME_CARD_XPATH, "多任务列表中的出境服务首页")
+        """Tap the pinned home task card."""
+        if self.find_xpath(self.HOME_CARD_XPATH) is None:
+            self.scroll_to_top()
+        self.tap_xpath(self.HOME_CARD_XPATH, "pinned home task card")
 
     def wait_only_home(self, *, timeout: float = 8) -> None:
         """等待所有三方任务清除，仅保留固定首页。"""

@@ -12,31 +12,23 @@ from utils.allure_visual import assert_visible_and_attach_highlight
 @dataclass(frozen=True)
 class DestinationRefreshCase:
     destination: str
-    home_post_id: str
     nearby_region_text: str
 
 
 DESTINATION_CASES = (
     DestinationRefreshCase(
         destination="中国澳门",
-        home_post_id="2027204543522172929",
         nearby_region_text="中国澳门",
     ),
     DestinationRefreshCase(
         destination="温哥华",
-        home_post_id="2059534669958012934",
         nearby_region_text="温哥华",
     ),
     DestinationRefreshCase(
         destination="中国香港",
-        home_post_id="1961062286607056896",
         nearby_region_text="中国香港",
     ),
 )
-
-
-def _post_cover_xpath(post_id: str) -> str:
-    return f'//*[@id="{post_id}"]'
 
 
 def _nearby_region_xpath(region_text: str) -> str:
@@ -71,10 +63,11 @@ def test_destination_switch_refresh_home_and_nearby(driver) -> None:
                 timeout=8,
                 attach_crop=False,
             )
+            card = home_page.find_visible_guide_for_destination(case.destination)
             assert_visible_and_attach_highlight(
                 driver,
-                BY.xpath(_post_cover_xpath(case.home_post_id)),
-                f"首页瀑布流第一篇帖子-{case.destination}",
+                BY.xpath(home_page.guide_cover_xpath(card.post_id)),
+                f"首页瀑布流目的地-{case.destination}-{card.title}",
                 timeout=8,
                 attach_crop=False,
             )
@@ -98,3 +91,4 @@ def test_destination_switch_refresh_home_and_nearby(driver) -> None:
                 timeout=8,
                 attach_crop=False,
             )
+            home_page.restore_top()

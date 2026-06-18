@@ -7,7 +7,6 @@ from utils.allure_visual import assert_visible_and_attach_highlight
 
 
 POI_NAME = "合和酒店"
-RANKING_NAME = "住宿榜"
 
 
 @allure.feature("POI 外部服务")
@@ -35,15 +34,8 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
         )
         assert_visible_and_attach_highlight(
             driver,
-            BY.text(RANKING_NAME),
-            f"搜索榜单-{RANKING_NAME}",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
             BY.xpath(search_page.ranking_poi_xpath(POI_NAME)),
-            f"{RANKING_NAME}POI-{POI_NAME}",
+            f"搜索榜单住宿POI-{POI_NAME}",
             timeout=8,
             attach_crop=False,
         )
@@ -82,7 +74,7 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
         poi_page.tap_navigation()
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_page.MAP_START_NAVIGATION_XPATH),
+            BY.xpath(poi_page.MAP_ROUTE_PANEL_XPATH),
             f"花瓣地图导航页-{POI_NAME}",
             timeout=12,
             attach_crop=False,

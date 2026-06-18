@@ -23,13 +23,27 @@ class FoodOrderingPage(BasePage):
         'and ./Column/Text[@text="蜀小魚 (深水埗)"]]'
     )
     ORDER_CONTENT_XPATH = '//Tabs'
+    ORDER_ROW_XPATH = (
+        '//Tabs//ListItem//Row[@clickable="true" and ./Column/Text]'
+    )
+    ORDER_NAME_TEXT_XPATH = (
+        '//Tabs//ListItem//Row[@clickable="true"]/Column/Text[1]'
+    )
     ORDER_TEXT_XPATH = (
         '//Tabs//ListItem//Row[@clickable="true"]/Column/Text'
     )
+    CATEGORY_BAR_XPATH = '//ListItem[@clickable="true" and ./Text[@text="海鲜"]]'
     SELECTED_BACKGROUND = "#E6000000"
     LIGE_ROW_XPATH = (
         '//Tabs//Row[@clickable="true" and ./Column/Text[@text="立哥"]]'
     )
+
+    @classmethod
+    def order_row_xpath(cls, service_name: str) -> str:
+        return (
+            '//Tabs//Row[@clickable="true" '
+            f'and ./Column/Text[@text="{service_name}"]]'
+        )
 
     @classmethod
     def category_xpath(cls, category_name: str) -> str:
@@ -47,9 +61,44 @@ class FoodOrderingPage(BasePage):
 
     def tap_category(self, category_name: str) -> None:
         """点击点餐页顶部分类。"""
+        self.ensure_category_visible(category_name)
         self.tap_xpath(
             self.category_item_xpath(category_name),
             f"点餐分类“{category_name}”",
+        )
+
+    def ensure_category_visible(
+        self,
+        category_name: str,
+        *,
+        max_swipes: int = 6,
+    ) -> None:
+        """横向滚动顶部分类栏，直到目标分类进入当前 UI 树。"""
+        if self.find_xpath(self.category_item_xpath(category_name)) is not None:
+            return
+
+        for _ in range(max_swipes):
+            category_bar = self.find_xpath(self.CATEGORY_BAR_XPATH)
+            if category_bar is not None:
+                self.driver.swipe(
+                    "LEFT",
+                    distance=55,
+                    area=category_bar,
+                    swipe_time=0.45,
+                )
+            else:
+                self.driver.swipe(
+                    "LEFT",
+                    distance=55,
+                    start_point=(0.86, 0.19),
+                    swipe_time=0.45,
+                )
+            time.sleep(0.35)
+            if self.find_xpath(self.category_item_xpath(category_name)) is not None:
+                return
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 横向浏览分类栏后仍未看到“{category_name}”"
         )
 
     def is_category_highlighted(self, category_name: str) -> bool:
@@ -96,6 +145,23 @@ class FoodOrderingPage(BasePage):
                 texts.append(text)
         return tuple(texts)
 
+    def visible_order_names(self) -> tuple[str, ...]:
+        """读取当前分类已渲染的商户名称。"""
+        components = self.driver.find_all_components(
+            BY.xpath(self.ORDER_NAME_TEXT_XPATH)
+        )
+        if components is None:
+            return ()
+        if not isinstance(components, list):
+            components = [components]
+
+        names = []
+        for component in components:
+            name = component.getText().strip()
+            if name and name not in names:
+                names.append(name)
+        return tuple(names)
+
     def wait_order_content(
         self,
         *,
@@ -122,6 +188,18 @@ class FoodOrderingPage(BasePage):
     def tap_lige(self) -> None:
         """点击快餐分类中的“立哥”商户。"""
         self.tap_xpath(self.LIGE_ROW_XPATH, "快餐商户“立哥”")
+
+    def tap_first_visible_order(self) -> str:
+        """点击当前分类首个可见商户，并返回商户名称。"""
+        names = self.visible_order_names()
+        if not names:
+            raise RuntimeError(f"[{self.PAGE_NAME}] 当前分类没有可见商户")
+        service_name = names[0]
+        self.tap_xpath(
+            self.order_row_xpath(service_name),
+            f"点餐商户“{service_name}”",
+        )
+        return service_name
 
     @classmethod
     def search_result_row_xpath(cls, service_name: str) -> str:

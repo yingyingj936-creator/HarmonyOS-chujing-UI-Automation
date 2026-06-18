@@ -12,6 +12,7 @@ def test_home_hotel_and_train_entries(driver) -> None:
     home = OutboundHomePage(driver)
 
     with allure.step("步骤1：查看首页金刚区入口"):
+        home.ensure_kingkong_first_page()
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(home.SERVICE_TAB_ROW_XPATH),

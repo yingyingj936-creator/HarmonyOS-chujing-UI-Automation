@@ -51,6 +51,44 @@ def attach_fullscreen(driver: Any, name: str) -> None:
             _attach_image(image, name)
 
 
+def component_has_red_highlight(
+    driver: Any,
+    component: Any,
+    *,
+    minimum_red_pixels: int = 20,
+) -> bool:
+    """通过组件截图中的红色像素判断爱心等图标是否处于高亮态。"""
+    with TemporaryDirectory() as temp_dir:
+        crop_jpeg_path = Path(temp_dir) / "state.jpeg"
+        saved_crop_jpeg_path = Path(
+            driver.capture_screen(
+                str(crop_jpeg_path),
+                in_pc=True,
+                area=component,
+            )
+        )
+        with Image.open(saved_crop_jpeg_path) as image:
+            red_pixels = 0
+            rgb_image = image.convert("RGB")
+            pixels = (
+                rgb_image.get_flattened_data()
+                if hasattr(rgb_image, "get_flattened_data")
+                else rgb_image.getdata()
+            )
+            for red, green, blue in pixels:
+                if (
+                    red >= 175
+                    and green <= 145
+                    and blue <= 155
+                    and red - green >= 50
+                    and red - blue >= 35
+                ):
+                    red_pixels += 1
+                    if red_pixels >= minimum_red_pixels:
+                        return True
+    return False
+
+
 def assert_visible_and_attach_highlight(
     driver: Any,
     selector: Any,
@@ -103,3 +141,33 @@ def assert_visible_and_attach_highlight(
             with Image.open(saved_crop_jpeg_path) as crop_image:
                 _attach_image(crop_image, f"{name}-局部")
     return component
+
+
+def attach_highlighted_bounds(
+    driver: Any,
+    bounds: Any,
+    name: str,
+    *,
+    margin: int = 8,
+    line_width: int = 6,
+    outline_color: str = "#FF2D55",
+) -> None:
+    """Attach a full screenshot with a highlighted arbitrary bounds rectangle."""
+    left, top, right, bottom = _to_rect_tuple(bounds)
+    with TemporaryDirectory() as temp_dir:
+        full_raw_jpeg_path = Path(temp_dir) / "fullscreen.jpeg"
+        saved_raw_jpeg_path = Path(
+            driver.capture_screen(
+                str(full_raw_jpeg_path),
+                in_pc=True,
+            )
+        )
+        with Image.open(saved_raw_jpeg_path) as raw_image:
+            marked_image = raw_image.convert("RGB")
+            draw = ImageDraw.Draw(marked_image)
+            l = max(0, left - margin)
+            t = max(0, top - margin)
+            r = min(marked_image.width - 1, right + margin)
+            b = min(marked_image.height - 1, bottom + margin)
+            draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
+            _attach_image(marked_image, f"{name}-圈选")

@@ -5,6 +5,7 @@ from typing import Any
 from hypium import BY
 
 from pages.base_page import BasePage
+from utils.allure_visual import component_has_red_highlight
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,7 @@ class OutboundHomePage(BasePage):
     )
     SCENIC_TICKET_ENTRY_XPATH = (
         f'{HOME_RECOMMENDS_SECTION_XPATH}'
-        '//Text[@text="景区门票"]'
+        '//Text[@text="景区门票" or @text="景区游玩"]'
     )
     YOUTUBE_ENTRY_XPATH = (
         f'{HOME_RECOMMENDS_SECTION_XPATH}'
@@ -78,13 +79,20 @@ class OutboundHomePage(BasePage):
     HOTEL_RESULTS_FILTER_XPATH = '//*[@text="价格/等级"]'
     TRAIN_DESTINATION_PAGE_TITLE_XPATH = '//heading[@text="目的地"]'
     HOT_ROUTES_SECTION_XPATH = '//*[@id="home_hot_routes_section"]'
+    HOT_ROUTE_CARD_XPATH_TEMPLATE = (
+        f'{HOT_ROUTES_SECTION_XPATH}'
+        '//Stack[@clickable="true" and .//Text[@text="{route_name}"]]'
+    )
+    HOT_ROUTE_TEXT_XPATH_TEMPLATE = (
+        f'{HOT_ROUTES_SECTION_XPATH}//Text[@text="{{route_name}}"]'
+    )
     WATERFALL_SECTION_XPATH = '//*[@id="home_discovery_section"]'
     CATEGORY_LIST_XPATH = (
         '//*[@id="TabHomeCompRoot"]//ListItemGroup/'
         'List[@scrollable="true"]'
     )
     WATERFALL_LIST_XPATH = (
-        f'{WATERFALL_SECTION_XPATH}//WaterFlow[@scrollable="true"]'
+        f'{WATERFALL_SECTION_XPATH}//WaterFlow'
     )
     WATERFALL_COVER_XPATH = (
         f'{WATERFALL_LIST_XPATH}/Column/__Common__'
@@ -184,6 +192,11 @@ class OutboundHomePage(BasePage):
 
     def ensure_kingkong_first_page(self) -> None:
         """将金刚区恢复到包含“景区门票”的默认第一屏。"""
+        self.restore_top(max_swipes=18)
+        home_tab = self._restore_service_tab_row()
+        if home_tab is not None:
+            home_tab.click()
+            time.sleep(0.8)
         if self.driver.wait_for_component(
             BY.xpath(self.SCENIC_TICKET_ENTRY_XPATH),
             timeout=1,
@@ -193,13 +206,37 @@ class OutboundHomePage(BasePage):
         grid = self.wait_xpath(
             self.KINGKONG_ENTRY_GRID_XPATH,
             "首页金刚区服务列表",
-        )
-        self.driver.swipe("RIGHT", distance=60, area=grid)
-        self.wait_xpath(
-            self.SCENIC_TICKET_ENTRY_XPATH,
-            "金刚区默认第一屏“景区门票”入口",
             timeout=8,
         )
+        for _ in range(3):
+            self.driver.swipe("RIGHT", distance=60, area=grid)
+            if self.driver.wait_for_component(
+                BY.xpath(self.SCENIC_TICKET_ENTRY_XPATH),
+                timeout=1.5,
+            ) is not None:
+                return
+
+        self.wait_xpath(
+            self.SCENIC_TICKET_ENTRY_XPATH,
+            "金刚区默认第一屏“景区门票/景区游玩”入口",
+            timeout=3,
+        )
+
+    def _restore_service_tab_row(self, *, max_swipes: int = 12):
+        """回到金刚区服务 Tab 行，用于需要操作服务入口的用例。"""
+        home_tab_selector = self.service_tab_xpath("首页")
+        for _ in range(max_swipes + 1):
+            home_tab = self.find_xpath(home_tab_selector)
+            if home_tab is not None:
+                return home_tab
+            self.driver.swipe(
+                "DOWN",
+                distance=80,
+                start_point=(0.5, 0.25),
+                swipe_time=0.5,
+            )
+            time.sleep(0.4)
+        return None
 
     def swipe_kingkong_to_second_page(self) -> None:
         """在金刚区横向左滑到包含 YouTube 的第二屏。"""
@@ -223,6 +260,30 @@ class OutboundHomePage(BasePage):
         self.tap_xpath(
             self.LOCAL_SERVICE_ENTRY_XPATH,
             "首页金刚区“本地服务”入口",
+        )
+
+    @classmethod
+    def hot_route_card_xpath(cls, route_name: str) -> str:
+        """生成首页热门路线卡片 XPath。"""
+        return cls.HOT_ROUTE_CARD_XPATH_TEMPLATE.format(route_name=route_name)
+
+    @classmethod
+    def hot_route_text_xpath(cls, route_name: str) -> str:
+        """生成首页热门路线标题 XPath。"""
+        return cls.HOT_ROUTE_TEXT_XPATH_TEMPLATE.format(route_name=route_name)
+
+    def tap_hot_route_card(self, route_name: str) -> None:
+        """点击首页热门路线中的指定卡片。"""
+        component = self.wait_xpath(
+            self.hot_route_text_xpath(route_name),
+            f"首页热门路线“{route_name}”",
+        )
+        bounds = component.getBounds()
+        self.driver.click(
+            (
+                (int(bounds.left) + int(bounds.right)) // 2,
+                (int(bounds.top) + int(bounds.bottom)) // 2,
+            )
         )
 
     def tap_train_destination(self) -> None:
@@ -316,6 +377,40 @@ class OutboundHomePage(BasePage):
             f"[{self.PAGE_NAME}] 两次点击“{tab_name}”后瀑布流内容仍未变化"
         )
 
+    def select_guide_category(
+        self,
+        tab_name: str,
+        *,
+        timeout: float = 8,
+    ) -> tuple[str, ...]:
+        """选择分类并等待瀑布流内容稳定，用于准备或恢复测试状态。"""
+        self.ensure_category_tab_visible(tab_name)
+        self.tap_xpath(
+            self.category_tab_text_xpath(tab_name),
+            f"首页攻略分类“{tab_name}”文字",
+        )
+
+        deadline = time.monotonic() + timeout
+        previous_ids: tuple[str, ...] = ()
+        stable_reads = 0
+        time.sleep(1)
+
+        while time.monotonic() < deadline:
+            current_ids = self.visible_guide_post_ids()
+            if current_ids:
+                if current_ids == previous_ids:
+                    stable_reads += 1
+                    if stable_reads >= 2:
+                        return current_ids
+                else:
+                    previous_ids = current_ids
+                    stable_reads = 0
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 选择“{tab_name}”后瀑布流内容未稳定"
+        )
+
     @classmethod
     def guide_card_xpath(cls, post_id: str) -> str:
         return (
@@ -343,6 +438,14 @@ class OutboundHomePage(BasePage):
     def guide_likes_xpath(cls, post_id: str) -> str:
         return f'{cls.guide_card_xpath(post_id)}/Row[2]/Row[2]/Text[1]'
 
+    @classmethod
+    def guide_like_row_xpath(cls, post_id: str) -> str:
+        return f'{cls.guide_card_xpath(post_id)}/Row[2]/Row[2]'
+
+    @classmethod
+    def guide_like_icon_xpath(cls, post_id: str) -> str:
+        return f'{cls.guide_like_row_xpath(post_id)}/Image[1]'
+
     @staticmethod
     def _component_id(component: Any) -> str:
         properties = component.getAllProperties().to_dict()
@@ -365,6 +468,37 @@ class OutboundHomePage(BasePage):
                 post_ids.append(post_id)
         if len(post_ids) != len(set(post_ids)):
             raise RuntimeError(f"[{self.PAGE_NAME}] 当前瀑布流出现重复帖子 ID")
+        return tuple(post_ids)
+
+    def visible_full_guide_post_ids(self) -> tuple[str, ...]:
+        """一次性读取当前屏幕内完整可见的攻略帖子 ID，减少 UI dump 次数。"""
+        components = self.driver.find_all_components(
+            BY.xpath(self.WATERFALL_COVER_XPATH)
+        )
+        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
+        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        if components is None or categories is None or navigation is None:
+            return ()
+        if not isinstance(components, list):
+            components = [components]
+
+        top_limit = int(categories.getBounds().bottom)
+        bottom_limit = int(navigation.getBounds().top)
+        post_ids = []
+        for component in components:
+            post_id = self._component_id(component)
+            if not post_id:
+                continue
+            bounds = component.getBounds()
+            if (
+                int(bounds.top) >= top_limit
+                and int(bounds.bottom) <= bottom_limit
+                and int(bounds.right) > int(bounds.left)
+                and int(bounds.bottom) - int(bounds.top) >= 100
+            ):
+                post_ids.append(post_id)
+        if len(post_ids) != len(set(post_ids)):
+            raise RuntimeError(f"[{self.PAGE_NAME}] 当前可见瀑布流出现重复帖子 ID")
         return tuple(post_ids)
 
     def scroll_to_waterfall(self) -> tuple[str, ...]:
@@ -443,6 +577,16 @@ class OutboundHomePage(BasePage):
             return False
         return int(card.getBounds().bottom) <= int(navigation.getBounds().top)
 
+    @staticmethod
+    def _is_component_center_visible(component, *, bottom_limit: int) -> bool:
+        bounds = component.getBounds()
+        center_y = (int(bounds.top) + int(bounds.bottom)) // 2
+        return (
+            int(bounds.right) > int(bounds.left)
+            and int(bounds.bottom) > int(bounds.top)
+            and 0 <= center_y <= bottom_limit
+        )
+
     def guide_card_fields(self, post_id: str) -> HomeGuideCard:
         """读取指定攻略卡片的标题、作者、目的地和点赞数。"""
         self.wait_xpath(self.guide_cover_xpath(post_id), "攻略封面")
@@ -470,11 +614,302 @@ class OutboundHomePage(BasePage):
             likes=likes,
         )
 
+    @staticmethod
+    def _normalize_destination_text(value: str) -> str:
+        return value.replace("中国", "").strip()
+
+    def find_visible_guide_for_destination(
+        self,
+        destination: str,
+        *,
+        max_swipes: int = 10,
+    ) -> HomeGuideCard:
+        """在当前首页瀑布流中找一张目的地匹配的攻略卡片，避免依赖后端固定帖子 ID。"""
+        expected = self._normalize_destination_text(destination)
+        self.scroll_to_waterfall()
+
+        for swipe_count in range(max_swipes + 1):
+            for post_id in self.visible_guide_post_ids():
+                if not self.is_guide_card_above_bottom_navigation(post_id):
+                    continue
+                try:
+                    card = self.guide_card_fields(post_id)
+                except RuntimeError:
+                    continue
+                actual = self._normalize_destination_text(card.destination)
+                if expected and (expected in actual or actual in expected):
+                    return card
+
+            if swipe_count == max_swipes:
+                break
+            self.scroll_guide_feed_once()
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 浏览 {max_swipes} 屏后未找到目的地为“{destination}”的首页攻略卡片"
+        )
+
+    @staticmethod
+    def parse_like_count(value: str) -> int:
+        normalized = value.replace(",", "").strip()
+        if not normalized.isdigit():
+            raise RuntimeError(f"点赞数格式异常：{value!r}")
+        return int(normalized)
+
+    def guide_like_count(self, post_id: str) -> int:
+        text = self.wait_xpath(
+            self.guide_likes_xpath(post_id),
+            "攻略点赞数",
+        ).getText()
+        return self.parse_like_count(text)
+
+    def is_guide_liked(self, post_id: str) -> bool:
+        icon = self.wait_xpath(
+            self.guide_like_icon_xpath(post_id),
+            "攻略点赞爱心",
+        )
+        return component_has_red_highlight(self.driver, icon)
+
+    def tap_guide_like(self, post_id: str) -> None:
+        self.tap_xpath(
+            self.guide_like_row_xpath(post_id),
+            "攻略点赞按钮",
+        )
+
+    def tap_guide_card(self, post_id: str) -> None:
+        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        bottom_limit = (
+            int(navigation.getBounds().top)
+            if navigation is not None
+            else 10_000
+        )
+        for xpath in (self.guide_cover_xpath(post_id), self.guide_title_xpath(post_id)):
+            component = self.find_xpath(xpath)
+            if component is not None and self._is_component_center_visible(
+                component,
+                bottom_limit=bottom_limit,
+            ):
+                component.click()
+                return
+        self.tap_xpath(self.guide_card_xpath(post_id), "攻略卡片")
+
+    def wait_guide_like_count(
+        self,
+        post_id: str,
+        expected: int,
+        *,
+        timeout: float = 10,
+    ) -> int:
+        deadline = time.monotonic() + timeout
+        last_count: int | None = None
+        while time.monotonic() < deadline:
+            try:
+                last_count = self.guide_like_count(post_id)
+            except RuntimeError:
+                time.sleep(0.4)
+                continue
+            if last_count == expected:
+                return last_count
+            time.sleep(0.4)
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 攻略 {post_id} 点赞数未变为 {expected}，"
+            f"最后读取={last_count}"
+        )
+
+    def is_guide_like_control_visible(self, post_id: str) -> bool:
+        like_row = self.find_xpath(self.guide_like_row_xpath(post_id))
+        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        if like_row is None or navigation is None:
+            return False
+        bounds = like_row.getBounds()
+        return (
+            int(bounds.top) >= 0
+            and int(bounds.bottom) <= int(navigation.getBounds().top)
+        )
+
+    def is_guide_card_fully_visible(self, post_id: str) -> bool:
+        """判断卡片封面和信息区均处于分类栏与底部导航之间。"""
+        card = self.find_xpath(self.guide_card_xpath(post_id))
+        cover = self.find_xpath(self.guide_cover_xpath(post_id))
+        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
+        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        if any(
+            component is None
+            for component in (card, cover, categories, navigation)
+        ):
+            return False
+
+        card_bounds = card.getBounds()
+        cover_bounds = cover.getBounds()
+        return (
+            int(card_bounds.top) >= int(categories.getBounds().bottom)
+            and int(card_bounds.bottom) <= int(navigation.getBounds().top)
+            and int(cover_bounds.right) > int(cover_bounds.left)
+            and int(cover_bounds.bottom) - int(cover_bounds.top) >= 100
+        )
+
+    def is_guide_card_safely_clickable(self, post_id: str) -> bool:
+        """判断攻略卡片当前有可点击区域未被底部导航遮挡。"""
+        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        if navigation is None:
+            return False
+        bottom_limit = int(navigation.getBounds().top)
+        for xpath in (self.guide_cover_xpath(post_id), self.guide_title_xpath(post_id)):
+            component = self.find_xpath(xpath)
+            if component is not None and self._is_component_center_visible(
+                component,
+                bottom_limit=bottom_limit,
+            ):
+                return True
+        return False
+
+    def find_visible_guide(self, *, max_swipes: int = 12) -> HomeGuideCard:
+        """返回发现流中首个完整可见、可安全点击的攻略卡片。"""
+        self.select_guide_category("发现")
+        self.scroll_to_waterfall()
+
+        for swipe_count in range(max_swipes + 1):
+            for post_id in self.visible_guide_post_ids():
+                if not self.is_guide_card_fully_visible(post_id):
+                    continue
+                card = self.guide_card_fields(post_id)
+                if all(ord(character) <= 0xFFFF for character in card.title):
+                    return card
+
+            if swipe_count == max_swipes:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=55,
+                start_point=(0.5, 0.82),
+                swipe_time=0.55,
+            )
+            time.sleep(0.7)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 浏览 {max_swipes} 屏后仍未找到完整可见的攻略卡片"
+        )
+
+    def visible_fully_visible_guides(
+        self,
+        excluded_post_ids: set[str] | None = None,
+    ) -> tuple[HomeGuideCard, ...]:
+        """读取当前屏幕内完整可见且尚未检查的攻略卡片。"""
+        excluded = excluded_post_ids or set()
+        cards = []
+        for post_id in self.visible_full_guide_post_ids():
+            if post_id in excluded:
+                continue
+            card = self.guide_card_fields(post_id)
+            if all(ord(character) <= 0xFFFF for character in card.title):
+                cards.append(card)
+        return tuple(cards)
+
+    def scroll_guide_feed_once(self) -> None:
+        self.driver.swipe(
+            "UP",
+            distance=60,
+            start_point=(0.5, 0.82),
+            swipe_time=0.55,
+        )
+        time.sleep(0.7)
+
+    def guide_card_bounds(self, post_id: str) -> tuple[int, int, int, int]:
+        card = self.wait_xpath(
+            self.guide_card_xpath(post_id),
+            f"攻略卡片 {post_id}",
+        )
+        bounds = card.getBounds()
+        return (
+            int(bounds.left),
+            int(bounds.top),
+            int(bounds.right),
+            int(bounds.bottom),
+        )
+
+    def find_unliked_guide(
+        self,
+        *,
+        max_swipes: int = 16,
+    ) -> HomeGuideCard:
+        """浏览发现瀑布流并返回首个完整可见的未点赞帖子。"""
+        self.select_guide_category("发现")
+        self.scroll_to_waterfall()
+
+        for swipe_count in range(max_swipes + 1):
+            for post_id in self.visible_guide_post_ids():
+                if not self.is_guide_card_safely_clickable(post_id):
+                    continue
+                if not self.is_guide_like_control_visible(post_id):
+                    continue
+                if not self.is_guide_liked(post_id):
+                    return self.guide_card_fields(post_id)
+
+            if swipe_count == max_swipes:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=65,
+                start_point=(0.5, 0.82),
+                swipe_time=0.6,
+            )
+            time.sleep(0.8)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 浏览 {max_swipes} 屏后仍未找到未点赞攻略"
+        )
+
+    def find_guide_in_feed(
+        self,
+        post_id: str,
+        *,
+        max_swipes: int = 18,
+    ) -> None:
+        """重进首页后按帖子 ID 找回目标攻略，并确保点赞区域未被导航遮挡。"""
+        if (
+            self.find_xpath(self.guide_card_xpath(post_id)) is not None
+            and self.is_guide_like_control_visible(post_id)
+        ):
+            return
+
+        self.select_guide_category("发现")
+        self.scroll_to_waterfall()
+
+        for swipe_count in range(max_swipes + 1):
+            if (
+                self.find_xpath(self.guide_card_xpath(post_id)) is not None
+                and self.is_guide_like_control_visible(post_id)
+            ):
+                return
+
+            if swipe_count == max_swipes:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=65,
+                start_point=(0.5, 0.82),
+                swipe_time=0.6,
+            )
+            time.sleep(0.8)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 重进后未在发现流找到攻略 {post_id}"
+        )
+
     def restore_top(self, *, max_swipes: int = 12) -> None:
         """测试结束后将首页恢复到顶部，避免污染后续用例。"""
-        selector = BY.xpath(self.SEARCH_BAR_XPATH)
+        first_screen_selectors = (
+            BY.xpath(self.SERVICE_TAB_ROW_XPATH),
+            BY.xpath(self.SEARCH_BAR_XPATH),
+        )
         for _ in range(max_swipes + 1):
-            if self.driver.wait_for_component(selector, timeout=0.5) is not None:
+            if (
+                self.find_xpath(self.REGION_SELECTOR_XPATH) is not None
+                and any(
+                    self.driver.wait_for_component(selector, timeout=0.3)
+                    is not None
+                    for selector in first_screen_selectors
+                )
+            ):
                 return
             self.driver.swipe(
                 "DOWN",

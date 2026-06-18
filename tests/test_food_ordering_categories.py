@@ -11,7 +11,7 @@ from utils.allure_visual import assert_visible_and_attach_highlight
 @allure.feature("本地服务")
 @allure.story("掌上美食分类与商户跳转")
 def test_food_ordering_categories_and_lige(driver) -> None:
-    """验证掌上美食入口、分类刷新、立哥服务和手势返回状态。"""
+    """验证掌上美食入口、分类刷新、商户服务和手势返回状态。"""
     home = OutboundHomePage(driver)
     local_service = LocalServicePage(driver)
     ordering_page = FoodOrderingPage(driver)
@@ -73,12 +73,12 @@ def test_food_ordering_categories_and_lige(driver) -> None:
                 attach_crop=False,
             )
 
-    with allure.step("步骤4：点击“立哥”，进入立哥服务"):
-        ordering_page.tap_lige()
+    with allure.step("步骤4：点击快餐分类首个商户，进入商户服务"):
+        merchant_name = ordering_page.tap_first_visible_order()
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(service_page.title_xpath("立哥")),
-            "立哥服务页",
+            BY.xpath(service_page.title_xpath(merchant_name)),
+            f"{merchant_name}服务页",
             timeout=15,
             attach_crop=False,
         )
@@ -92,8 +92,8 @@ def test_food_ordering_categories_and_lige(driver) -> None:
         )
         ordering_page.wait_category_highlighted("快餐", timeout=5)
         ordering_page.wait_xpath(
-            ordering_page.LIGE_ROW_XPATH,
-            "快餐分类中的“立哥”",
+            ordering_page.order_row_xpath(merchant_name),
+            f"快餐分类中的“{merchant_name}”",
             timeout=8,
         )
         assert_visible_and_attach_highlight(
