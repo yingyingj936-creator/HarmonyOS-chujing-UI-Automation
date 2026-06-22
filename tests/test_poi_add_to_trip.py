@@ -44,7 +44,7 @@ def test_add_poi_to_new_trip_twice(driver) -> None:
         )
         search_page.dismiss_keyboard()
 
-    with allure.step("步骤1：点击榜单 POI“旺角”，进入对应详情页"):
+    with allure.step("步骤1：点击榜单地点“旺角”，进入对应详情页"):
         search_page.scroll_ranking_poi_into_view(POI_NAME)
         assert_visible_and_attach_highlight(
             driver,
@@ -79,7 +79,7 @@ def test_add_poi_to_new_trip_twice(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：点击地点详情页内返回按钮，返回 POI 详情页"):
+    with allure.step("步骤3：点击地点详情页内返回按钮，返回地点详情页"):
         poi_page.tap_location_detail_back()
         assert_visible_and_attach_highlight(
             driver,
@@ -202,3 +202,4 @@ def test_add_poi_to_new_trip_twice(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

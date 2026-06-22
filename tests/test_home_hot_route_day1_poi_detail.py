@@ -23,7 +23,7 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
         route_detail.tap_day_1_tab(timeout=10)
         route_detail.wait_day_1_route_list(timeout=10)
 
-    with allure.step("步骤1：查看“第1天”tab下地图背景"):
+    with allure.step("步骤1：查看“第1天”标签下地图背景"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.MAP_VIEW_XPATH),
@@ -39,7 +39,7 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2：查看“第1天”tab下卡片陈列，校验POI顺序、简介和相邻地点距离"):
+    with allure.step("步骤2：查看“第1天”标签下卡片陈列，校验地点顺序、简介和相邻地点距离"):
         route_detail.wait_day_1_route_list(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -56,7 +56,7 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：点击“第1天”tab下POI点，校验POI详情信息和底部操作区"):
+    with allure.step("步骤3：点击“第1天”标签下地点，校验地点详情信息和底部操作区"):
         route_detail.tap_day_1_first_poi(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -87,7 +87,7 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：点击右上角叉号，退出POI详情并回到第1天列表"):
+    with allure.step("步骤4：点击右上角叉号，退出地点详情并回到第1天列表"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.POI_DETAIL_CLOSE_XPATH),
@@ -103,3 +103,4 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

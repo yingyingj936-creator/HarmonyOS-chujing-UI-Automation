@@ -60,7 +60,7 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：通过系统右侧边缘左滑手势返回 POI 详情页"):
+    with allure.step("步骤4：通过系统右侧边缘左滑手势返回地点详情页"):
         poi_page.system_gesture_back()
         assert_visible_and_attach_highlight(
             driver,
@@ -79,3 +79,4 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
             timeout=12,
             attach_crop=False,
         )
+

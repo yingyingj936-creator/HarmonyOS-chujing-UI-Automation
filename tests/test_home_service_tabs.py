@@ -8,7 +8,7 @@ from utils.allure_visual import assert_visible_and_attach_highlight
 @allure.feature("出境服务卡片")
 @allure.story("首页金刚区酒店与火车入口")
 def test_home_hotel_and_train_entries(driver) -> None:
-    """验证首页酒店、火车 Tab 内容及对应查询页面可正常打开。"""
+    """验证首页酒店、火车标签内容及对应查询页面可正常打开。"""
     home = OutboundHomePage(driver)
 
     with allure.step("步骤1：查看首页金刚区入口"):
@@ -21,7 +21,7 @@ def test_home_hotel_and_train_entries(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2：点击酒店Tab，展示酒店查询内容"):
+    with allure.step("步骤2：点击酒店标签，展示酒店查询内容"):
         home.tap_service_tab("酒店")
         assert_visible_and_attach_highlight(
             driver,
@@ -45,7 +45,7 @@ def test_home_hotel_and_train_entries(driver) -> None:
         driver.press_back()
         home.wait_xpath(home.HOME_ROOT_XPATH, "出境服务首页", timeout=12)
 
-    with allure.step("步骤4：点击火车Tab，展示火车票查询内容"):
+    with allure.step("步骤4：点击火车标签，展示火车票查询内容"):
         home.tap_service_tab("火车")
         assert_visible_and_attach_highlight(
             driver,
@@ -64,3 +64,5 @@ def test_home_hotel_and_train_entries(driver) -> None:
             timeout=15,
             attach_crop=False,
         )
+
+

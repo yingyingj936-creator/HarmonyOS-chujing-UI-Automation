@@ -51,7 +51,7 @@ class MinePage(BasePage):
         )
 
     def wait_content_loaded(self, *, timeout: float = 25) -> None:
-        """等待“我的”页从 loading 态切到真实内容，避免过早查找收藏 Tab。"""
+        """等待“我的”页从 loading 态切到真实内容，避免过早查找收藏标签。"""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             loading = self.find_xpath(self.LOADING_XPATH)
@@ -178,3 +178,4 @@ class MinePage(BasePage):
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 收藏帖子列表未找到“{post_title}”"
         )
+

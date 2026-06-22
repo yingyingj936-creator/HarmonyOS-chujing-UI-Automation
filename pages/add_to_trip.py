@@ -13,8 +13,17 @@ class AddToTripPage(BasePage):
     CLOSE_BUTTON_XPATH = '//SheetPage/Button'
 
     @staticmethod
-    def trip_card_xpath(trip_name: str) -> str:
-        return f'//SheetPage//Text[@text="{trip_name}"]'
+    def _text_match_condition(text: str) -> str:
+        return (
+            f'@text="{text}" or contains(@text, "{text}") or '
+            f'(string-length(@text) > 4 and contains("{text}", @text))'
+        )
+
+    @classmethod
+    def trip_card_xpath(cls, trip_name: str) -> str:
+        return (
+            f'//SheetPage//Text[{cls._text_match_condition(trip_name)}]'
+        )
 
     @staticmethod
     def trip_name_input_value_xpath(trip_name: str) -> str:

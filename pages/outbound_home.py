@@ -162,21 +162,21 @@ class OutboundHomePage(BasePage):
 
     @classmethod
     def service_tab_xpath(cls, tab_name: str) -> str:
-        """生成首页金刚区指定服务 Tab 的 XPath。"""
+        """生成首页金刚区指定服务标签的 XPath。"""
         return (
             f'{cls.HOME_RECOMMENDS_SECTION_XPATH}'
             f'//Column[@clickable="true" and ./Text[@text="{tab_name}"]]'
         )
 
     def tap_service_tab(self, tab_name: str) -> None:
-        """切换首页金刚区的首页、酒店或火车 Tab。"""
+        """切换首页金刚区的首页、酒店或火车标签。"""
         self.tap_xpath(
             self.service_tab_xpath(tab_name),
-            f"首页金刚区“{tab_name}”Tab",
+            f"首页金刚区“{tab_name}”标签",
         )
 
     def tap_hotel_query(self) -> None:
-        """点击酒店 Tab 中的“查询酒店”。"""
+        """点击酒店标签中的“查询酒店”。"""
         self.tap_xpath(self.HOTEL_QUERY_BUTTON_XPATH, "查询酒店")
 
     def tap_taxi_entry(self) -> None:
@@ -223,7 +223,7 @@ class OutboundHomePage(BasePage):
         )
 
     def _restore_service_tab_row(self, *, max_swipes: int = 12):
-        """回到金刚区服务 Tab 行，用于需要操作服务入口的用例。"""
+        """回到金刚区服务标签行，用于需要操作服务入口的用例。"""
         home_tab_selector = self.service_tab_xpath("首页")
         for _ in range(max_swipes + 1):
             home_tab = self.find_xpath(home_tab_selector)
@@ -272,12 +272,59 @@ class OutboundHomePage(BasePage):
         """生成首页热门路线标题 XPath。"""
         return cls.HOT_ROUTE_TEXT_XPATH_TEMPLATE.format(route_name=route_name)
 
+    def _find_hot_route_text(self, route_name: str, *, timeout: float = 0.8):
+        """查找当前可视区域内的热门路线标题，兼容 section id 短时缺失。"""
+        selectors = (
+            BY.xpath(self.hot_route_text_xpath(route_name)),
+            BY.text(route_name),
+        )
+        for selector in selectors:
+            component = self.driver.wait_for_component(
+                selector,
+                timeout=timeout,
+            )
+            if component is not None:
+                return component
+        return None
+
+    def ensure_hot_route_visible(
+        self,
+        route_name: str,
+        *,
+        max_swipes: int = 8,
+    ):
+        """回到首页顶部附近后，向下查找指定热门路线直到其进入可视区域。"""
+        component = self._find_hot_route_text(route_name, timeout=0.5)
+        if component is not None:
+            return component
+
+        try:
+            self.restore_top(max_swipes=max(18, max_swipes))
+        except RuntimeError:
+            # 继续向下找，最终失败时给出热门路线自身的错误信息。
+            pass
+
+        for swipe_count in range(max_swipes + 1):
+            component = self._find_hot_route_text(route_name, timeout=0.8)
+            if component is not None:
+                return component
+            if swipe_count == max_swipes:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=75,
+                start_point=(0.5, 0.78),
+                swipe_time=0.5,
+            )
+            time.sleep(0.7)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 滚动查找后仍未找到首页热门路线“{route_name}”"
+        )
+
     def tap_hot_route_card(self, route_name: str) -> None:
         """点击首页热门路线中的指定卡片。"""
-        component = self.wait_xpath(
-            self.hot_route_text_xpath(route_name),
-            f"首页热门路线“{route_name}”",
-        )
+        component = self.ensure_hot_route_visible(route_name)
         bounds = component.getBounds()
         self.driver.click(
             (
@@ -287,7 +334,7 @@ class OutboundHomePage(BasePage):
         )
 
     def tap_train_destination(self) -> None:
-        """点击火车 Tab 中的“目的地”。"""
+        """点击火车标签中的“目的地”。"""
         self.tap_xpath(self.TRAIN_DESTINATION_XPATH, "火车目的地")
 
     @classmethod
@@ -310,7 +357,7 @@ class OutboundHomePage(BasePage):
         *,
         max_swipes: int = 8,
     ) -> None:
-        """横向滚动攻略分类栏，直到目标 Tab 完整可见。"""
+        """横向滚动攻略分类栏，直到目标标签完整可见。"""
         category_list = self.wait_xpath(
             self.CATEGORY_LIST_XPATH,
             "首页攻略分类栏",
@@ -350,7 +397,7 @@ class OutboundHomePage(BasePage):
         """
         点击攻略分类并等待瀑布流内容变化。
 
-        UI 树不暴露分类 selected 状态，使用“目标 Tab 可见且帖子 ID 集合变化”
+        UI 树不暴露分类选中状态，使用“目标标签可见且帖子 ID 集合变化”
         作为选中高亮和对应内容加载成功的代理断言。
         """
         previous_ids = set(previous_post_ids)
@@ -899,7 +946,7 @@ class OutboundHomePage(BasePage):
         """测试结束后将首页恢复到顶部，避免污染后续用例。"""
         first_screen_selectors = (
             BY.xpath(self.SERVICE_TAB_ROW_XPATH),
-            BY.xpath(self.SEARCH_BAR_XPATH),
+            BY.xpath(self.KINGKONG_ENTRY_GRID_XPATH),
         )
         for _ in range(max_swipes + 1):
             if (
@@ -933,3 +980,5 @@ class OutboundHomePage(BasePage):
             return self.find_xpath(self.SEARCH_BAR_XPATH) is not None
         except Exception:
             return False
+
+

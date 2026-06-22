@@ -88,7 +88,7 @@ def test_home_hot_route_join_trip(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：进入底部导航“行程”，校验我的行程列表新增该行程且天数、POI点数据一致"):
+    with allure.step("步骤4：进入底部导航“行程”，校验我的行程列表新增该行程且天数、地点数据一致"):
         trip_detail.tap_back_button()
         if driver.wait_for_component(BY.xpath(home.SEARCH_BAR_XPATH), timeout=2) is None:
             route_detail.tap_back_button()
@@ -116,3 +116,4 @@ def test_home_hot_route_join_trip(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

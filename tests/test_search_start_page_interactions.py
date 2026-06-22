@@ -95,7 +95,7 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：点击榜单 POI“太平山顶”，进入对应详情页"):
+    with allure.step("步骤3：点击榜单地点“太平山顶”，进入对应详情页"):
         search_page.tap_ranking_poi("太平山顶")
         assert_visible_and_attach_highlight(
             driver,
@@ -105,7 +105,7 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3.1：点击 POI 详情页内返回按钮，返回搜索启动页"):
+    with allure.step("步骤3.1：点击地点详情页内返回按钮，返回搜索启动页"):
         poi_detail_page.tap_back_button("太平山顶")
         assert_visible_and_attach_highlight(
             driver,
@@ -155,3 +155,4 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

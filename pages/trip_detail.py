@@ -4,7 +4,6 @@ from pages.base_page import BasePage
 class TripDetailPage(BasePage):
     PAGE_NAME = "TripDetailPage"
     BACK_BUTTON_XPATH = '//*[@id="planPageRoot"]/Column[1]/Row[1]/Row[1]'
-    TITLE_XPATH_TEMPLATE = '//*[@id="routeName"]/Text[@text="{trip_name}"]'
     FIRST_UNPLANNED_POI_XPATH_TEMPLATE = (
         '//*[@id="firstUnplannedPoi"]//Text[@text="{poi_name}"]'
     )
@@ -25,17 +24,29 @@ class TripDetailPage(BasePage):
 
     @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
-        displayed_name = trip_name.replace("-", "")
-        if displayed_name == trip_name:
-            return f'@text="{trip_name}"'
-        return f'@text="{trip_name}" or @text="{displayed_name}"'
+        names = []
+        for name in (trip_name, trip_name.replace("-", "")):
+            if name and name not in names:
+                names.append(name)
+
+        conditions = []
+        for name in names:
+            conditions.append(f'@text="{name}"')
+            conditions.append(f'contains(@text, "{name}")')
+            conditions.append(
+                f'(string-length(@text) > 4 and contains("{name}", @text))'
+            )
+        return " or ".join(conditions)
 
     @classmethod
     def route_trip_title_xpath(cls, trip_name: str) -> str:
         return f'//Text[{cls._display_name_xpath_condition(trip_name)}]'
     @classmethod
     def title_xpath(cls, trip_name: str) -> str:
-        return cls.TITLE_XPATH_TEMPLATE.format(trip_name=trip_name)
+        return (
+            f'//*[@id="routeName"]/Text'
+            f'[{cls._display_name_xpath_condition(trip_name)}]'
+        )
 
     @classmethod
     def first_unplanned_poi_xpath(cls, poi_name: str) -> str:

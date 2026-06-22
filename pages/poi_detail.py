@@ -36,6 +36,7 @@ class PoiDetailPage(BasePage):
         '//Row[@clickable="true" and ./Text[@text="导航"]]'
     )
     BOOKING_TITLE_XPATH = '//Text[@id="title" and @text="Booking"]'
+    TASK_LIMIT_CONTINUE_XPATH = '//Text[@text="继续"]'
     MAP_START_NAVIGATION_XPATH = (
         '//Button[@id="direction_routes_result_start_navigation_button"]'
     )
@@ -118,10 +119,23 @@ class PoiDetailPage(BasePage):
     def tap_book_hotel(self) -> None:
         """点击 POI 详情页右下角“订酒店”。"""
         self.tap_xpath(self.BOOK_HOTEL_BUTTON_XPATH, "订酒店按钮")
+        self._continue_task_limit_prompt_if_present()
 
     def tap_navigation(self) -> None:
         """点击 POI 详情页右下角“导航”。"""
         self.tap_xpath(self.NAVIGATION_BUTTON_XPATH, "导航按钮")
+        self._continue_task_limit_prompt_if_present()
+
+    def _continue_task_limit_prompt_if_present(self) -> None:
+        """兼容任务数量上限提示弹窗，出现时点击“继续”进入服务。"""
+        continue_button = self.driver.wait_for_component(
+            BY.xpath(self.TASK_LIMIT_CONTINUE_XPATH),
+            timeout=2,
+        )
+        if continue_button is None:
+            return
+        continue_button.click()
+        time.sleep(1.5)
 
     def system_gesture_back(self) -> None:
         """从屏幕右边缘左滑，执行 HarmonyOS 系统返回手势。"""

@@ -17,7 +17,7 @@ def test_home_hot_route_poi_surrounding_recommendations(driver) -> None:
     home = OutboundHomePage(driver)
     route_detail = RouteDetailPage(driver)
 
-    with allure.step("前置条件：普通用户进入“香港逛吃两日游”通菜街 POI 详情页"):
+    with allure.step("前置条件：普通用户进入“香港逛吃两日游”通菜街地点详情页"):
         home.restore_top(max_swipes=12)
         home.tap_hot_route_card(ROUTE_NAME)
         route_detail.wait_loaded(ROUTE_NAME, timeout=15)
@@ -25,7 +25,7 @@ def test_home_hot_route_poi_surrounding_recommendations(driver) -> None:
         route_detail.wait_day_1_route_list(timeout=10)
         route_detail.tap_day_1_first_poi(timeout=10)
 
-    with allure.step("步骤1：查看周边推荐，校验分类和周边 POI 卡片信息"):
+    with allure.step("步骤1：查看周边推荐，校验分类和周边地点卡片信息"):
         route_detail.wait_surrounding_categories(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -76,7 +76,7 @@ def test_home_hot_route_poi_surrounding_recommendations(driver) -> None:
                 attach_crop=False,
             )
 
-    with allure.step("步骤3：点击周边 POI 点，校验拉起周边 POI 详情"):
+    with allure.step("步骤3：点击周边地点，校验拉起周边地点详情"):
         route_detail.tap_surrounding_first_poi(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -100,7 +100,7 @@ def test_home_hot_route_poi_surrounding_recommendations(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：点击右上角叉号，退出周边 POI 详情并回到第1天列表"):
+    with allure.step("步骤4：点击右上角叉号，退出周边地点详情并回到第1天列表"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.POI_DETAIL_CLOSE_XPATH),
@@ -116,3 +116,4 @@ def test_home_hot_route_poi_surrounding_recommendations(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

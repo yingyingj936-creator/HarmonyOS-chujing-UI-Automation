@@ -8,15 +8,24 @@ class TripManagerPage(BasePage):
     TRIP_LIST_XPATH = '//List[@scrollable="true"]'
 
     @staticmethod
-    def trip_card_xpath(trip_name: str) -> str:
-        return f'//Text[@text="{trip_name}"]'
-
-    @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
-        displayed_name = trip_name.replace("-", "")
-        if displayed_name == trip_name:
-            return f'@text="{trip_name}"'
-        return f'@text="{trip_name}" or @text="{displayed_name}"'
+        names = []
+        for name in (trip_name, trip_name.replace("-", "")):
+            if name and name not in names:
+                names.append(name)
+
+        conditions = []
+        for name in names:
+            conditions.append(f'@text="{name}"')
+            conditions.append(f'contains(@text, "{name}")')
+            conditions.append(
+                f'(string-length(@text) > 4 and contains("{name}", @text))'
+            )
+        return " or ".join(conditions)
+
+    @classmethod
+    def trip_card_xpath(cls, trip_name: str) -> str:
+        return f'//Text[{cls._display_name_xpath_condition(trip_name)}]'
 
     @classmethod
     def route_trip_card_title_xpath(cls, trip_name: str) -> str:

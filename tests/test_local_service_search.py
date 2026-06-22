@@ -57,7 +57,7 @@ def test_local_service_search_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：点击列表第2个结果，进入Dufry服务"):
+    with allure.step("步骤3：点击列表第2个结果，进入 Dufry 服务"):
         local_service.tap_search_result(second_result)
         assert_visible_and_attach_highlight(
             driver,
@@ -67,7 +67,7 @@ def test_local_service_search_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：侧滑返回并点击输入框X号，清除搜索结果"):
+    with allure.step("步骤4：侧滑返回并点击输入框清空按钮，清除搜索结果"):
         local_service.system_gesture_back()
         local_service.wait_xpath(
             local_service.search_result_row_xpath(second_result),
@@ -83,3 +83,5 @@ def test_local_service_search_and_clear(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+
+

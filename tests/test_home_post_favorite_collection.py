@@ -87,7 +87,7 @@ def test_post_favorite_appears_in_mine_collection(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2：进入我的页收藏区域并切换到帖子 Tab"):
+    with allure.step("步骤2：进入我的页收藏区域并切换到帖子标签"):
         detail.tap_back_button()
         assert home.wait_loaded(timeout=10), "从帖子详情返回后未回到首页"
         navigation.tap_mine()
@@ -108,7 +108,7 @@ def test_post_favorite_appears_in_mine_collection(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：在我的收藏帖子 Tab 查找该帖子"):
+    with allure.step("步骤3：在我的收藏帖子标签查找该帖子"):
         mine.scroll_favorite_post_into_view(card.title, max_swipes=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -117,3 +117,4 @@ def test_post_favorite_appears_in_mine_collection(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+

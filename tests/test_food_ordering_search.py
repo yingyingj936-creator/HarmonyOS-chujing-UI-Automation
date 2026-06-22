@@ -65,7 +65,7 @@ def test_food_ordering_search_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤4：点击搜索框X号，清除搜索结果"):
+    with allure.step("步骤4：点击搜索框清空按钮，清除搜索结果"):
         ordering_page.tap_clear_search()
         ordering_page.wait_search_cleared(timeout=8)
         assert_visible_and_attach_highlight(
@@ -75,3 +75,4 @@ def test_food_ordering_search_and_clear(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+
