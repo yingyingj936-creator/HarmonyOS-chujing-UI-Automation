@@ -152,6 +152,40 @@ class MinePage(BasePage):
             f"[{self.PAGE_NAME}] 收藏地点列表未找到“{place_name}”"
         )
 
+    def favorite_place_exists(
+        self,
+        place_name: str,
+        *,
+        max_swipes: int = 5,
+    ) -> bool:
+        """查找收藏地点是否存在，找不到时返回 False。"""
+        try:
+            self.scroll_favorite_place_into_view(
+                place_name,
+                max_swipes=max_swipes,
+            )
+        except RuntimeError:
+            return False
+        return True
+
+    def wait_favorite_place_absent(
+        self,
+        place_name: str,
+        *,
+        timeout: float = 8,
+        max_swipes: int = 5,
+    ) -> bool:
+        """等待收藏地点从列表中移除。"""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if not self.favorite_place_exists(
+                place_name,
+                max_swipes=max_swipes,
+            ):
+                return True
+            time.sleep(0.8)
+        return False
+
     def scroll_favorite_post_into_view(
         self,
         post_title: str,

@@ -51,6 +51,11 @@ FILE_ORDER = {
     "test_destination_selector_browse.py": 36,
     "test_destination_switch_refresh.py": 37,
     "test_clear_search_history.py": 38,
+    "test_trip_page_overview.py": 39,
+    "test_trip_video_tutorial.py": 40,
+    "test_trip_reference_hot_routes.py": 41,
+    "test_trip_reference_route_join_trip.py": 42,
+    "test_trip_long_press_edit_menu.py": 43,
 }
 
 
@@ -193,7 +198,13 @@ def _return_to_home(driver, settings: AppSettings) -> bool:
         if home_tab is not None:
             try:
                 navigation.tap_home(timeout=2)
-                if home.wait_loaded(timeout=3):
+                if (
+                    driver.wait_for_component(
+                        BY.xpath(home.HOME_ROOT_XPATH),
+                        timeout=3,
+                    )
+                    is not None
+                ):
                     return True
             except RuntimeError:
                 pass
@@ -238,7 +249,13 @@ def _restore_home_top(driver) -> bool:
     """回到首页后统一恢复到顶部，避免上个用例的滚动位置污染金刚区/目的地用例。"""
     home = OutboundHomePage(driver)
     try:
-        if not home.wait_loaded(timeout=3):
+        if (
+            driver.wait_for_component(
+                BY.xpath(home.HOME_ROOT_XPATH),
+                timeout=3,
+            )
+            is None
+        ):
             return False
         home.restore_top(max_swipes=18)
         return True

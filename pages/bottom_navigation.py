@@ -15,9 +15,16 @@ class BottomNavigation(BasePage):
         '//*[@id="HwAuthDialog_rootId"]//Column[./Text[@text="{tab_name}"]]'
     )
 
+    @classmethod
+    def tab_xpath(cls, tab_name: str) -> str:
+        return cls._TAB_XPATH_TEMPLATE.format(tab_name=tab_name)
+
     def _tap_tab(self, tab_name: str, timeout: float = 8) -> None:
-        xpath = self._TAB_XPATH_TEMPLATE.format(tab_name=tab_name)
-        self.tap_xpath(xpath, f"底部“{tab_name}”页签", timeout=timeout)
+        self.tap_xpath(
+            self.tab_xpath(tab_name),
+            f"底部“{tab_name}”页签",
+            timeout=timeout,
+        )
 
     def tap_trip(self) -> None:
         self._tap_tab("行程")

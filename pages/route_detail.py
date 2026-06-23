@@ -87,6 +87,7 @@ class RouteDetailPage(BasePage):
     POI_DETAIL_FAVORITE_BUTTON_XPATH = (
         '//*[@id="map_bottom_panel"]//Row[@clickable="true" and ./Image]'
     )
+    POI_DETAIL_FAVORITE_SELECTED_BACKGROUND = "#1AFFBF00"
     POI_DETAIL_SERVICE_XPATH = '//*[@id="map_bottom_panel"]//Text[@text="\u8ddf\u56e2\u6e38"]'
     POI_DETAIL_NAVIGATION_XPATH = '//*[@id="map_bottom_panel"]//Text[@text="\u5bfc\u822a"]'
     POI_DETAIL_CLOSE_XPATH = '//*[@id="map_bottom_panel"]//Image[@clickable="true"]'
@@ -426,6 +427,21 @@ class RouteDetailPage(BasePage):
             timeout=timeout,
         )
 
+    def wait_generic_route_loaded(self, route_name: str, *, timeout: float = 12) -> None:
+        """等待任意热门路线详情页加载完成。"""
+        self.wait_xpath(self.ROOT_XPATH, "路线详情根节点", timeout=timeout)
+        self.wait_xpath(self.MAP_VIEW_XPATH, "路线地图背景", timeout=timeout)
+        self.wait_xpath(
+            self.overview_title_xpath(route_name),
+            f"路线概览标题{route_name}",
+            timeout=timeout,
+        )
+        self.wait_xpath(
+            self.ROUTE_JOIN_TRIP_BUTTON_XPATH,
+            "路线详情加入我的行程按钮",
+            timeout=timeout,
+        )
+
     def wait_surrounding_poi_list(self, *, timeout: float = 8) -> None:
         """校验周边 POI 列表展示卡片信息和距离。"""
         self.scroll_poi_detail_until_xpath_visible(
@@ -597,6 +613,48 @@ class RouteDetailPage(BasePage):
         self.wait_xpath(self.POI_DETAIL_TAG_XPATH, "游玩模式POI详情标签", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_RATING_XPATH, "游玩模式POI详情评分", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_GALLERY_XPATH, "游玩模式POI详情图集", timeout=timeout)
+
+    def tap_poi_favorite(self, *, timeout: float = 8) -> None:
+        """点击游玩模式地点详情收藏按钮。"""
+        self.tap_xpath(
+            self.POI_DETAIL_FAVORITE_BUTTON_XPATH,
+            "游玩模式地点详情收藏按钮",
+            timeout=timeout,
+        )
+
+    def is_poi_favorite_highlighted(self) -> bool:
+        """通过收藏按钮背景色判断地点是否已收藏。"""
+        component = self.wait_xpath(
+            self.POI_DETAIL_FAVORITE_BUTTON_XPATH,
+            "游玩模式地点详情收藏按钮",
+        )
+        background = component.getAllProperties().to_dict().get(
+            "backgroundColor",
+            "",
+        )
+        return background.upper() == self.POI_DETAIL_FAVORITE_SELECTED_BACKGROUND
+
+    def wait_poi_favorite_highlighted(
+        self,
+        expected: bool,
+        *,
+        timeout: float = 5,
+    ) -> bool:
+        """等待游玩模式地点收藏按钮切换到期望状态。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.is_poi_favorite_highlighted() is expected:
+                return True
+            time.sleep(0.4)
+        return False
+
+    def ensure_poi_favorite_unselected(self) -> None:
+        """重复执行用例前，先将游玩模式地点恢复为未收藏状态。"""
+        if not self.is_poi_favorite_highlighted():
+            return
+        self.tap_poi_favorite()
+        if not self.wait_poi_favorite_highlighted(False):
+            raise RuntimeError("无法将游玩模式地点收藏按钮恢复为未高亮状态")
 
     def _is_play_mode_poi_detail_open_for(self, poi_name: str) -> bool:
         return (
