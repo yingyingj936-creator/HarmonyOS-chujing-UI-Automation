@@ -61,7 +61,12 @@ FILE_ORDER = {
     "test_trip_detail_view_map_play_mode.py": 46,
     "test_trip_detail_rename.py": 47,
     "test_trip_detail_edit_page.py": 48,
-    "test_trip_delete_card.py": 49,
+    "test_trip_edit_tabs.py": 49,
+    "test_trip_edit_select_cancel.py": 50,
+    "test_trip_detail_poi_light.py": 51,
+    "test_trip_edit_move_poi_to_day2.py": 52,
+    "test_trip_edit_delete_second_poi.py": 53,
+    "test_trip_delete_card.py": 54,
 }
 
 

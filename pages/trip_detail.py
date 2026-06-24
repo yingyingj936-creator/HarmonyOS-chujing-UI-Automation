@@ -84,6 +84,35 @@ class TripDetailPage(BasePage):
         'or contains(@text, "个")]'
     )
     ROOT_TEXT_XPATH = '//*[@id="planPageRoot"]//Text'
+    POI_DETAIL_ROOT_XPATH = '//*[@id="map_panel_poidetail"]'
+    POI_DETAIL_ENGLISH_NAME_XPATH_TEMPLATE = '//Text[@text="{english_name}"]'
+    POI_DETAIL_TAG_XPATH = '//*[@id="map_panel_poidetail"]//Text[@text="景点"]'
+    POI_DETAIL_RATING_XPATH = (
+        '//*[@id="map_panel_poidetail"]//Text[starts-with(@text, "评分 ")]'
+    )
+    POI_DETAIL_GALLERY_XPATH = (
+        '//*[@id="map_panel_poidetail"]//ListItem/__Common__[@clickable="true"]'
+    )
+    POI_DETAIL_INTRO_XPATH = (
+        '//*[@id="map_panel_poidetail"]//Text[contains(@text, "详情")]'
+    )
+    POI_DETAIL_TIPS_XPATH = (
+        '//*[@id="map_panel_poidetail"]//Text'
+        '[contains(@text, "游玩") '
+        'or contains(@text, "提示") '
+        'or contains(@text, "贴士") '
+        'or contains(@text, "建议") '
+        'or contains(@text, "注意") '
+        'or contains(@text, "交通") '
+        'or contains(@text, "开放") '
+        'or contains(@text, "营业") '
+        'or contains(@text, "tips") '
+        'or contains(@text, "Tips")]'
+    )
+    POI_DETAIL_RECOMMEND_TITLE_XPATH = (
+        '//*[@id="map_panel_poidetail"]//Text[@text="相关推荐"]'
+    )
+    POI_DETAIL_RECOMMEND_LIST_XPATH = '//*[@id="discovery_list_poidetail"]'
 
     @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
@@ -326,6 +355,203 @@ class TripDetailPage(BasePage):
             f'and .//Text[@text="{poi_name}" or contains(@text, "{poi_name}")] '
             'and (.//Image or .//SymbolGlyph)]'
         )
+
+    @classmethod
+    def poi_detail_english_name_xpath(cls, english_name: str) -> str:
+        return cls.POI_DETAIL_ENGLISH_NAME_XPATH_TEMPLATE.format(
+            english_name=english_name
+        )
+
+    @staticmethod
+    def _as_list(components) -> list:
+        if components is None:
+            return []
+        if isinstance(components, list):
+            return components
+        return [components]
+
+    @staticmethod
+    def _bounds_tuple(component) -> tuple[int, int, int, int]:
+        bounds = component.getBounds()
+        return int(bounds.left), int(bounds.top), int(bounds.right), int(bounds.bottom)
+
+    @staticmethod
+    def _component_type(component) -> str:
+        try:
+            return component.getAllProperties().to_dict().get("type", "")
+        except Exception:
+            return ""
+
+    def tap_route_day_poi(
+        self,
+        poi_name: str,
+        *,
+        max_swipes: int = 8,
+        timeout: float = 8,
+    ) -> None:
+        """点击行程详情里的指定 POI。"""
+        poi = self.scroll_until_xpath_visible(
+            self.route_day_poi_xpath(poi_name),
+            f"行程详情POI{poi_name}",
+            max_swipes=max_swipes,
+            timeout=timeout,
+        )
+        poi.click()
+        time.sleep(1)
+
+    def wait_poi_detail_loaded(
+        self,
+        *,
+        english_name: str | None = None,
+        timeout: float = 8,
+    ) -> None:
+        """等待行程详情内 POI 详情卡片展示首屏核心内容。"""
+        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        if english_name is not None:
+            self.wait_xpath(
+                self.poi_detail_english_name_xpath(english_name),
+                f"POI英文名{english_name}",
+                timeout=timeout,
+            )
+        self.wait_xpath(self.POI_DETAIL_TAG_XPATH, "POI详情标签", timeout=timeout)
+        self.wait_xpath(self.POI_DETAIL_RATING_XPATH, "POI详情评分", timeout=timeout)
+        self.wait_xpath(self.POI_DETAIL_GALLERY_XPATH, "POI详情图集", timeout=timeout)
+        self.wait_xpath(self.POI_DETAIL_INTRO_XPATH, "POI详情简介", timeout=timeout)
+
+    def swipe_poi_detail_up(self) -> None:
+        """在 POI 详情半卡片内向下浏览。"""
+        detail = self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片")
+        self.driver.swipe("UP", distance=60, area=detail, swipe_time=0.55)
+        time.sleep(0.8)
+
+    def scroll_poi_detail_until_xpath_visible(
+        self,
+        xpath: str,
+        name: str,
+        *,
+        max_swipes: int = 5,
+        timeout: float = 8,
+    ):
+        """滚动 POI 详情卡片直到目标内容可见。"""
+        for swipe_count in range(max_swipes + 1):
+            component = self.find_xpath(xpath)
+            if component is not None:
+                return component
+            if swipe_count == max_swipes:
+                break
+            self.swipe_poi_detail_up()
+        return self.wait_xpath(xpath, name, timeout=timeout)
+
+    def _screen_bounds(self) -> tuple[int, int, int, int]:
+        root = self.find_xpath(self.ROOT_XPATH) or self.find_xpath(
+            self.POI_DETAIL_ROOT_XPATH
+        )
+        if root is None:
+            return 0, 0, 0, 0
+        return self._bounds_tuple(root)
+
+    def _find_clickable_by_bounds(
+        self,
+        predicate,
+        name: str,
+        *,
+        timeout: float = 8,
+    ):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            components = self._as_list(
+                self.driver.find_all_components(BY.xpath('//*[@clickable="true"]'))
+            )
+            candidates = []
+            for component in components:
+                try:
+                    bounds = self._bounds_tuple(component)
+                except Exception:
+                    continue
+                if bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
+                    continue
+                if predicate(component, bounds):
+                    candidates.append((bounds[1], bounds[0], component))
+            if candidates:
+                candidates.sort(key=lambda item: (item[0], item[1]))
+                return candidates[0][2]
+            time.sleep(0.3)
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到{name}，timeout={timeout}s")
+
+    def poi_detail_light_button(self, *, timeout: float = 8):
+        """定位 POI 详情左下角点亮按钮。"""
+        detail_bounds = self._bounds_tuple(
+            self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        )
+        screen_bounds = self._screen_bounds()
+        screen_width = max(1, screen_bounds[2] - screen_bounds[0])
+
+        def is_light_button(component, bounds: tuple[int, int, int, int]) -> bool:
+            return (
+                self._component_type(component) == "Image"
+                and bounds[0] <= screen_bounds[0] + screen_width * 0.15
+                and bounds[1] >= detail_bounds[3]
+                and bounds[3] > bounds[1]
+            )
+
+        return self._find_clickable_by_bounds(
+            is_light_button,
+            "POI详情左下角点亮按钮",
+            timeout=timeout,
+        )
+
+    def tap_poi_detail_light_button(self, *, timeout: float = 8):
+        """点击 POI 详情左下角点亮按钮并返回点击后的按钮控件。"""
+        button = self.poi_detail_light_button(timeout=timeout)
+        button.click()
+        time.sleep(1)
+        return self.poi_detail_light_button(timeout=timeout)
+
+    def poi_detail_close_button(self, *, timeout: float = 8):
+        """定位 POI 详情右上角关闭按钮，避开元服务右上角系统关闭按钮。"""
+        detail_bounds = self._bounds_tuple(
+            self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        )
+        screen_bounds = self._screen_bounds()
+        screen_width = max(1, screen_bounds[2] - screen_bounds[0])
+        detail_height = max(1, detail_bounds[3] - detail_bounds[1])
+
+        def is_close_button(component, bounds: tuple[int, int, int, int]) -> bool:
+            return (
+                self._component_type(component) == "Image"
+                and bounds[0] >= screen_bounds[0] + screen_width * 0.85
+                and bounds[1] >= detail_bounds[1] - detail_height * 0.35
+                and bounds[3] <= detail_bounds[1] + detail_height * 0.08
+            )
+
+        return self._find_clickable_by_bounds(
+            is_close_button,
+            "POI详情右上角关闭按钮",
+            timeout=timeout,
+        )
+
+    def close_poi_detail(self, trip_name: str, *, timeout: float = 8) -> None:
+        """关闭 POI 详情并等待回到行程详情页。"""
+        close_button = self.poi_detail_close_button(timeout=timeout)
+        close_button.click()
+        time.sleep(0.8)
+        self.wait_poi_detail_closed(timeout=timeout)
+        self.wait_loaded(trip_name, timeout=timeout)
+
+    def wait_poi_detail_closed(self, *, timeout: float = 5) -> None:
+        """等待 POI 详情卡片消失。"""
+        self.driver.wait_for_component_disappear(
+            BY.xpath(self.POI_DETAIL_ROOT_XPATH),
+            timeout=timeout,
+        )
+        if (
+            self.driver.wait_for_component(
+                BY.xpath(self.POI_DETAIL_ROOT_XPATH),
+                timeout=0.5,
+            )
+            is not None
+        ):
+            raise RuntimeError(f"[{self.PAGE_NAME}] POI详情关闭后仍然展示")
 
     def wait_route_trip_detail(self, trip_name: str, *, timeout: float = 8) -> None:
         """Verify a route-created trip detail page exposes title and route data."""
