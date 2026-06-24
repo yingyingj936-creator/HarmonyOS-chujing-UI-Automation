@@ -20,9 +20,8 @@ class MultiTaskPage(BasePage):
         '//*[@id="TabHomeCompRoot"]'
         '//RelativeContainer[@clickable="true" and ./Text[@id="txt_num"]]'
     )
-    SERVICE_ENTRY_XPATH = (
-        '//Stack/Column[./Divider and ./Image[@clickable="true"]]'
-        '/RelativeContainer[@clickable="true" and ./Text]'
+    CLICKABLE_ENTRY_XPATH = (
+        '//RelativeContainer[@clickable="true" and .//Text[@id="txt_num"]]'
     )
     LEGACY_SERVICE_ENTRY_XPATH = (
         '//RelativeContainer[@clickable="true" and ./Text[@id="txt_num"]]'
@@ -71,47 +70,122 @@ class MultiTaskPage(BasePage):
 
     def open(self) -> None:
         """从首页或三方服务的任务数量入口打开多任务浮层。"""
-        for point in self._floating_entry_points_by_screen_image():
-            self._touch_screen_point(point)
-            if self._wait_panel_opened(timeout=4):
-                self.wait_xpath(self.HEADER_XPATH, "多任务浮层标题", timeout=8)
-                self.dismiss_guide_if_present()
+        if self._open_from_visible_entry(timeout=2):
+            return
+
+        if self._open_from_screen_image(timeout=2):
+            return
+
+        if self._expand_collapsed_entry():
+            if self._finish_opened_panel(timeout=0.5):
+                return
+            if self._open_from_visible_entry(timeout=4):
+                return
+            if self._open_from_screen_image(timeout=2):
                 return
 
-        entry_xpaths = (
-            self.ENTRY_XPATH,
-            self.SERVICE_ENTRY_XPATH,
-            self.LEGACY_SERVICE_ENTRY_XPATH,
-            self.FLOATING_COLUMN_XPATH,
-            self.FLOATING_STACK_XPATH,
-            self.COUNT_TEXT_XPATH,
-        )
-        for xpath in entry_xpaths:
-            entries = self._find_all(xpath)
-            if not entries:
-                entry = self.driver.wait_for_component(
-                    BY.xpath(xpath),
-                    timeout=1,
-                )
-                entries = [entry] if entry is not None else []
+        # 三方服务刚进入时浮窗存在 5 秒默认展开态；前面若正好遇到过渡
+        # 动画，这里再轮询一次入口，避免错过自动展开窗口。
+        if self._open_from_visible_entry(timeout=6):
+            return
+        if self._open_from_screen_image(timeout=2):
+            return
 
-            for entry in entries:
-                self._click_multitask_entry(entry)
-                if self._wait_panel_opened(timeout=3):
-                    self.wait_xpath(self.HEADER_XPATH, "多任务浮层标题", timeout=8)
-                    self.dismiss_guide_if_present()
-                    return
-
-        for point in self._floating_entry_points_by_screen_image():
-            self._touch_screen_point(point)
-            if self._wait_panel_opened(timeout=4):
-                self.wait_xpath(self.HEADER_XPATH, "多任务浮层标题", timeout=8)
-                self.dismiss_guide_if_present()
+        if self._expand_collapsed_entry():
+            if self._finish_opened_panel(timeout=0.5):
+                return
+            if self._open_from_visible_entry(timeout=4):
+                return
+            if self._open_from_screen_image(timeout=2):
                 return
 
         self.wait_xpath(self.PANEL_XPATH, "多任务浮层", timeout=8)
         self.wait_xpath(self.HEADER_XPATH, "多任务浮层标题", timeout=8)
         self.dismiss_guide_if_present()
+
+    def _entry_xpaths(self) -> tuple[str, ...]:
+        """可通过 UI 树定位到的展开态多任务入口。"""
+        return (
+            self.ENTRY_XPATH,
+            self.LEGACY_SERVICE_ENTRY_XPATH,
+            self.CLICKABLE_ENTRY_XPATH,
+            self.COUNT_TEXT_XPATH,
+        )
+
+    def _open_from_visible_entry(self, *, timeout: float) -> bool:
+        """优先通过 UI 树中的多任务入口打开浮层，不依赖固定坐标。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for xpath in self._entry_xpaths():
+                for entry in self._find_all(xpath):
+                    if self._click_visible_entry(entry):
+                        return True
+            time.sleep(0.3)
+        return False
+
+    def _click_visible_entry(self, entry: Any) -> bool:
+        """点击已展开的多任务入口；只允许点击 txt_num 本身或其小型父容器。"""
+        if not self._is_safe_multitask_entry(entry):
+            return False
+
+        for point in self._entry_touch_points(entry):
+            self._touch_screen_point(point)
+            if self._finish_opened_panel(timeout=1.5):
+                return True
+
+        try:
+            entry.click()
+        except Exception:
+            return False
+        if self._finish_opened_panel(timeout=1.5):
+            return True
+        return False
+
+    def _is_safe_multitask_entry(self, entry: Any) -> bool:
+        """过滤掉误匹配到的业务页面大容器，避免在三方服务页乱点。"""
+        bounds = entry.getBounds()
+        left = int(bounds.left)
+        top = int(bounds.top)
+        right = int(bounds.right)
+        bottom = int(bounds.bottom)
+        width = max(1, right - left)
+        height = max(1, bottom - top)
+
+        # 多任务入口是右侧小浮层的一部分；全屏业务容器或页面卡片不能点击。
+        if width > 320 or height > 560:
+            return False
+        if left < 0:
+            return False
+        return True
+
+    def _open_from_screen_image(self, *, timeout: float) -> bool:
+        """UI 树点击失败时，只根据截图识别出的黑色浮窗区域点击，不使用固定坐标。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for point in self._floating_entry_points_by_screen_image():
+                self._touch_screen_point(point)
+                if self._finish_opened_panel(timeout=1):
+                    return True
+            time.sleep(0.4)
+        return False
+
+    def _expand_collapsed_entry(self) -> bool:
+        """UI 树没有入口时，用截图识别黑色浮窗本体并点击展开。"""
+        for point in self._floating_entry_points_by_screen_image():
+            self._touch_screen_point(point)
+            if self._finish_opened_panel(timeout=1):
+                return True
+            if self.find_xpath(self.COUNT_TEXT_XPATH) is not None:
+                return True
+            time.sleep(0.4)
+        return False
+
+    def _finish_opened_panel(self, *, timeout: float) -> bool:
+        if not self._wait_panel_opened(timeout=timeout):
+            return False
+        self.wait_xpath(self.HEADER_XPATH, "多任务浮层标题", timeout=8)
+        self.dismiss_guide_if_present()
+        return True
 
     def _wait_panel_opened(self, *, timeout: float) -> bool:
         return (
@@ -122,8 +196,8 @@ class MultiTaskPage(BasePage):
             is not None
         )
 
-    def _click_multitask_entry(self, entry: Any) -> None:
-        """新版浮球下半部分是反馈入口，命中整条浮球时只点上半部分。"""
+    def _entry_touch_points(self, entry: Any) -> list[tuple[int, int]]:
+        """从 UI 树控件边界推导多任务入口候选点，避免只点到数字文本。"""
         bounds = entry.getBounds()
         left = int(bounds.left)
         top = int(bounds.top)
@@ -132,14 +206,19 @@ class MultiTaskPage(BasePage):
         width = max(1, right - left)
         height = max(1, bottom - top)
         if height > width * 1.2:
-            self._touch_screen_point(
-                (
-                    (left + right) // 2,
-                    top + height // 4,
-                )
-            )
-        else:
-            self._touch_screen_point(((left + right) // 2, (top + bottom) // 2))
+            return self._points_in_floating_bounds(left, top, right, bottom)
+
+        center_x = (left + right) // 2
+        center_y = (top + bottom) // 2
+        points = [
+            (center_x, center_y),
+            (center_x, int(center_y + height * 0.9)),
+            (center_x, int(center_y + height * 1.8)),
+            (int(right - max(2, width * 0.15)), center_y),
+            (int(right - max(2, width * 0.15)), int(center_y + height * 1.2)),
+            (int(left + width * 0.35), int(center_y + height * 1.2)),
+        ]
+        return self._unique_points(points)
 
     def _touch_screen_point(self, point: tuple[int, int]) -> None:
         """用设备级触摸事件点击系统浮球，Hypium click 对该浮层不稳定。"""
@@ -207,44 +286,148 @@ class MultiTaskPage(BasePage):
                         red, green, blue = screenshot.getpixel((x, y))
                         if red < 70 and green < 70 and blue < 70:
                             black_pixels.append((x, y))
+                floating_bounds = self._largest_floating_black_bounds(
+                    black_pixels,
+                    width=width,
+                    height=height,
+                )
+                if floating_bounds is None:
+                    return []
 
-        floating_bounds = self._largest_floating_black_bounds(
-            black_pixels,
-            width=width,
-            height=height,
-        )
-        if floating_bounds is None:
-            return self._right_bottom_floating_fallback_points(width, height)
+                icon_points = self._white_top_icon_points(
+                    screenshot,
+                    floating_bounds,
+                )
+                if icon_points:
+                    return icon_points
 
         left, top, right, bottom = floating_bounds
-        floating_height = max(1, bottom - top)
-        floating_width = max(1, right - left)
-        icon_x_offset = int(min(max(floating_width * 0.30, 55), 75))
-        icon_y_offset = int(min(max(floating_height * 0.21, 70), 95))
-        icon_x = right - icon_x_offset
-        icon_y = top + icon_y_offset
-        return [
-            *self._right_bottom_floating_fallback_points(width, height),
-            (icon_x, icon_y),
-            (icon_x, icon_y + 20),
-            (icon_x, icon_y + 40),
-            (icon_x, icon_y - 15),
-        ]
+        return self._points_in_floating_bounds(left, top, right, bottom)
 
     @staticmethod
-    def _right_bottom_floating_fallback_points(
-        width: int,
-        height: int,
+    def _white_top_icon_points(
+        screenshot: Image.Image,
+        bounds: tuple[int, int, int, int],
     ) -> list[tuple[int, int]]:
-        """服务页内容与黑色悬浮球合并时使用的兜底点击点。"""
-        return [
-            (int(width * 0.953), int(height * 0.829)),
-            (int(width * 0.953), int(height * 0.845)),
-            (int(width * 0.94), int(height * 0.78)),
-            (int(width * 0.94), int(height * 0.80)),
-            (int(width * 0.94), int(height * 0.82)),
-            (int(width * 0.91), int(height * 0.80)),
-        ]
+        left, top, right, bottom = bounds
+        floating_height = max(1, bottom - top)
+        floating_width = max(1, right - left)
+        min_icon_top = int(top + floating_height * 0.16)
+        max_icon_bottom = int(top + floating_height * 0.52)
+        white_pixels = []
+        for y in range(top, bottom + 1):
+            for x in range(left, right + 1):
+                red, green, blue = screenshot.getpixel((x, y))
+                if red > 180 and green > 180 and blue > 180:
+                    white_pixels.append((x, y))
+
+        candidates = set(white_pixels)
+        best_bounds = None
+        best_area = 0
+        while candidates:
+            start = candidates.pop()
+            stack = [start]
+            c_left = c_right = start[0]
+            c_top = c_bottom = start[1]
+            area = 1
+            while stack:
+                x, y = stack.pop()
+                for neighbor in (
+                    (x + 1, y),
+                    (x - 1, y),
+                    (x, y + 1),
+                    (x, y - 1),
+                ):
+                    if neighbor not in candidates:
+                        continue
+                    candidates.remove(neighbor)
+                    stack.append(neighbor)
+                    nx, ny = neighbor
+                    c_left = min(c_left, nx)
+                    c_right = max(c_right, nx)
+                    c_top = min(c_top, ny)
+                    c_bottom = max(c_bottom, ny)
+                    area += 1
+
+            c_width = c_right - c_left
+            c_height = c_bottom - c_top
+            is_top_icon = (
+                area >= 30
+                and min_icon_top <= c_top
+                and c_bottom <= max_icon_bottom
+                and c_width <= floating_width * 0.75
+                and c_height <= floating_height * 0.35
+            )
+            if is_top_icon and area > best_area:
+                best_area = area
+                best_bounds = (c_left, c_top, c_right, c_bottom)
+
+        if best_bounds is None:
+            return []
+
+        c_left, c_top, c_right, c_bottom = best_bounds
+        center_x = (c_left + c_right) // 2
+        center_y = (c_top + c_bottom) // 2
+        return MultiTaskPage._unique_points(
+            (
+                (center_x, center_y),
+                (center_x, center_y + 8),
+                (center_x, center_y - 8),
+                (min(right - 4, center_x + 10), center_y),
+            )
+        )
+
+    @staticmethod
+    def _points_in_floating_bounds(
+        left: int,
+        top: int,
+        right: int,
+        bottom: int,
+    ) -> list[tuple[int, int]]:
+        floating_height = max(1, bottom - top)
+        floating_width = max(1, right - left)
+        center_x = (left + right) // 2
+        center_y = (top + bottom) // 2
+
+        if floating_height > floating_width * 1.2:
+            # 贴右边显示时，可见黑色区域的中心可能偏离真实按钮中心；
+            # 同时点可见区域中心和右侧，优先覆盖上半区多任务图标。
+            x_candidates = [
+                center_x,
+                int(left + floating_width * 0.68),
+                int(right - min(max(floating_width * 0.12, 4), 12)),
+            ]
+            y_candidates = [
+                int(top + floating_height * 0.26),
+                int(top + floating_height * 0.34),
+                int(top + floating_height * 0.42),
+                int(top + floating_height * 0.20),
+            ]
+            return MultiTaskPage._unique_points(
+                (x, y) for y in y_candidates for x in x_candidates
+            )
+
+        return MultiTaskPage._unique_points(
+            (
+                (center_x, center_y),
+                (int(left + floating_width * 0.65), center_y),
+                (int(right - min(max(floating_width * 0.12, 4), 12)), center_y),
+                (center_x, int(center_y - floating_height * 0.12)),
+                (center_x, int(center_y + floating_height * 0.12)),
+            )
+        )
+
+    @staticmethod
+    def _unique_points(points: Any) -> list[tuple[int, int]]:
+        unique = []
+        seen = set()
+        for x, y in points:
+            point = (int(x), int(y))
+            if point in seen:
+                continue
+            seen.add(point)
+            unique.append(point)
+        return unique
 
     @staticmethod
     def _largest_floating_black_bounds(
@@ -285,9 +468,9 @@ class MultiTaskPage(BasePage):
             box_width = right - left
             box_height = bottom - top
             is_floating_shape = (
-                50 <= box_width <= 280
-                and 120 <= box_height <= 520
-                and right >= int(width * 0.88)
+                45 <= box_width <= 320
+                and 45 <= box_height <= 560
+                and right >= int(width * 0.82)
                 and top >= int(height * 0.55)
             )
             if is_floating_shape and area > best_area:

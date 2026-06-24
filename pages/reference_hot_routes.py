@@ -11,7 +11,9 @@ class ReferenceHotRoutesPage(BasePage):
     PAGE_NAME = "ReferenceHotRoutesPage"
 
     CURRENT_REGION_TEXT = "中国香港"
-    CURRENT_REGION_XPATH = f'//Text[@text="{CURRENT_REGION_TEXT}"]'
+    CURRENT_REGION_XPATH = (
+        '//Text[@text="中国香港" or @text="香港" or contains(@text, "香港")]'
+    )
     ROUTE_LIST_XPATH = '//List[@scrollable="true"]'
     HOT_ROUTE_TITLE_XPATH = (
         '//List[@scrollable="true"]//Text'

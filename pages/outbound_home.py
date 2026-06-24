@@ -24,20 +24,25 @@ class OutboundHomePage(BasePage):
 
     PAGE_NAME = "OutboundHomePage"
     REGION_DROPDOWN_XPATH_TEMPLATE = (
-        '//*[@id="TabHomeCompRoot"]//Row[./Text[@text="{region_text}"]]'
+        '//*[@id="TabHomeCompRoot"]//Row[.//Text[@text="{region_text}"]]'
     )
     REGION_DROPDOWN_XPATH = REGION_DROPDOWN_XPATH_TEMPLATE.format(
         region_text="中国香港"
     )
     REGION_SELECTOR_XPATH = (
+        '//*[@id="TabHomeCompRoot"]//Row[@clickable="true" and .//Text['
+        'contains(@text, "中国") or contains(@text, "香港") '
+        'or contains(@text, "澳门") or @text="温哥华" or @text="泰国"]]'
+    )
+    LEGACY_REGION_SELECTOR_XPATH = (
         '//*[@id="TabHomeCompRoot"]/Column[1]/Column[1]/Column[1]/Row[1]'
     )
     HOME_ROOT_XPATH = '//*[@id="TabHomeCompRoot"]'
     SEARCH_BAR_TEXT = "搜索服务、地图、帖子"
     SEARCH_BAR_XPATH = '//*[@text="搜索服务、地图、帖子"]'
-    # 该节点在首页首屏中承载顶部视觉区（含金刚区渲染区域）。
-    KINGKONG_PROXY_XPATH = '//*[@id="TabHomeCompRoot"]/Stack[1]'
     HOME_RECOMMENDS_SECTION_XPATH = '//*[@id="home_recommends_section"]'
+    # 金刚区使用业务容器定位，避免依赖首屏 Stack 层级。
+    KINGKONG_PROXY_XPATH = HOME_RECOMMENDS_SECTION_XPATH
     SERVICE_TAB_ROW_XPATH = (
         f'{HOME_RECOMMENDS_SECTION_XPATH}//Row'
         '[./Column/Text[@text="首页"]]'
@@ -156,9 +161,18 @@ class OutboundHomePage(BasePage):
     def tap_region_selector(self, region_text: str | None = None) -> None:
         """点击首页地区切换下拉按钮。"""
         name = "地区切换下拉按钮"
+        candidate_xpaths = []
         if region_text:
             name += f"（当前地区：{region_text}）"
-        self.tap_xpath(self.REGION_SELECTOR_XPATH, name)
+            candidate_xpaths.append(self.region_dropdown_xpath(region_text))
+        candidate_xpaths.extend(
+            (
+                self.REGION_SELECTOR_XPATH,
+                self.REGION_DROPDOWN_XPATH,
+                self.LEGACY_REGION_SELECTOR_XPATH,
+            )
+        )
+        self.wait_any_xpath(tuple(candidate_xpaths), name).click()
 
     @classmethod
     def service_tab_xpath(cls, tab_name: str) -> str:
@@ -301,8 +315,13 @@ class OutboundHomePage(BasePage):
         try:
             self.restore_top(max_swipes=max(18, max_swipes))
         except RuntimeError:
-            # 继续向下找，最终失败时给出热门路线自身的错误信息。
-            pass
+            # 如果当前停在瀑布流吸顶区域，继续上拉会离热门路线更远。
+            # 先向下回退几次，再进入常规“从顶部向下找热门路线”的流程。
+            for _ in range(max(6, max_swipes)):
+                component = self._find_hot_route_text(route_name, timeout=0.5)
+                if component is not None:
+                    return component
+                self._swipe_home_down()
 
         for swipe_count in range(max_swipes + 1):
             component = self._find_hot_route_text(route_name, timeout=0.8)
@@ -341,14 +360,14 @@ class OutboundHomePage(BasePage):
     def category_tab_xpath(cls, tab_name: str) -> str:
         return (
             f'{cls.CATEGORY_LIST_XPATH}'
-            f'//Row[@clickable="true" and ./Text[@text="{tab_name}"]]'
+            f'//Row[@clickable="true" and .//Text[@text="{tab_name}"]]'
         )
 
     @classmethod
     def category_tab_text_xpath(cls, tab_name: str) -> str:
         return (
             f'{cls.category_tab_xpath(tab_name)}'
-            f'/Text[@text="{tab_name}"]'
+            f'//Text[@text="{tab_name}"]'
         )
 
     def ensure_category_tab_visible(
@@ -483,15 +502,21 @@ class OutboundHomePage(BasePage):
 
     @classmethod
     def guide_likes_xpath(cls, post_id: str) -> str:
-        return f'{cls.guide_card_xpath(post_id)}/Row[2]/Row[2]/Text[1]'
+        return f'{cls.guide_like_row_xpath(post_id)}/Text[1]'
 
     @classmethod
     def guide_like_row_xpath(cls, post_id: str) -> str:
-        return f'{cls.guide_card_xpath(post_id)}/Row[2]/Row[2]'
+        digit_condition = " or ".join(
+            f'contains(@text, "{digit}")' for digit in "0123456789"
+        )
+        return (
+            f'{cls.guide_card_xpath(post_id)}//Row'
+            f'[./Image and ./Text[{digit_condition}]]'
+        )
 
     @classmethod
     def guide_like_icon_xpath(cls, post_id: str) -> str:
-        return f'{cls.guide_like_row_xpath(post_id)}/Image[1]'
+        return f'{cls.guide_like_row_xpath(post_id)}/Image'
 
     @staticmethod
     def _component_id(component: Any) -> str:
@@ -550,21 +575,20 @@ class OutboundHomePage(BasePage):
 
     def scroll_to_waterfall(self) -> tuple[str, ...]:
         """实际上拉进入攻略瀑布流区域，并返回当前卡片 ID。"""
-        waterfall = self.wait_xpath(
-            self.WATERFALL_LIST_XPATH,
-            "首页攻略瀑布流",
-        )
-        self.driver.swipe(
-            "UP",
-            distance=45,
-            area=waterfall,
-            swipe_time=0.5,
-        )
-        time.sleep(0.8)
-        post_ids = self.visible_guide_post_ids()
-        if not post_ids:
-            raise RuntimeError(f"[{self.PAGE_NAME}] 上拉后没有可见攻略卡片")
-        return post_ids
+        self.wait_xpath(self.WATERFALL_LIST_XPATH, "首页攻略瀑布流")
+        for _ in range(5):
+            post_ids = self.visible_guide_post_ids()
+            if post_ids:
+                return post_ids
+            self.driver.swipe(
+                "UP",
+                distance=75,
+                start_point=(0.5, 0.82),
+                swipe_time=0.6,
+            )
+            time.sleep(0.8)
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] 上拉后没有可见攻略卡片")
 
     def load_more_guides(
         self,
@@ -637,22 +661,46 @@ class OutboundHomePage(BasePage):
     def guide_card_fields(self, post_id: str) -> HomeGuideCard:
         """读取指定攻略卡片的标题、作者、目的地和点赞数。"""
         self.wait_xpath(self.guide_cover_xpath(post_id), "攻略封面")
-        title = self.wait_xpath(
-            self.guide_title_xpath(post_id),
-            "攻略标题",
-        ).getText().strip()
-        author = self.wait_xpath(
-            self.guide_author_xpath(post_id),
-            "攻略作者",
-        ).getText().strip()
-        destination = self.wait_xpath(
-            self.guide_destination_xpath(post_id),
-            "攻略目的地",
-        ).getText().strip()
-        likes = self.wait_xpath(
-            self.guide_likes_xpath(post_id),
-            "攻略点赞数",
-        ).getText().strip()
+        try:
+            title = self.wait_xpath(
+                self.guide_title_xpath(post_id),
+                "攻略标题",
+            ).getText().strip()
+            author = self.wait_xpath(
+                self.guide_author_xpath(post_id),
+                "攻略作者",
+            ).getText().strip()
+            destination = self.wait_xpath(
+                self.guide_destination_xpath(post_id),
+                "攻略目的地",
+            ).getText().strip()
+            likes = self.wait_xpath(
+                self.guide_likes_xpath(post_id),
+                "攻略点赞数",
+            ).getText().strip()
+        except RuntimeError:
+            texts = self._guide_card_texts(post_id)
+            if len(texts) < 4:
+                raise RuntimeError(
+                    f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 文案字段不足：{texts}"
+                )
+
+            likes_index = next(
+                (
+                    index
+                    for index in range(len(texts) - 1, -1, -1)
+                    if texts[index].replace(",", "").isdigit()
+                ),
+                -1,
+            )
+            if likes_index <= 1:
+                raise RuntimeError(
+                    f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 未找到点赞数字段：{texts}"
+                )
+            title = texts[0]
+            author = texts[1]
+            destination = texts[likes_index - 1]
+            likes = texts[likes_index]
         return HomeGuideCard(
             post_id=post_id,
             title=title,
@@ -660,6 +708,28 @@ class OutboundHomePage(BasePage):
             destination=destination,
             likes=likes,
         )
+
+    def _guide_card_texts(self, post_id: str) -> tuple[str, ...]:
+        """按可视位置读取卡片内全部文本，作为结构 XPath 变化时的兜底。"""
+        components = self.driver.find_all_components(
+            BY.xpath(f'{self.guide_card_xpath(post_id)}//Text')
+        )
+        if components is None:
+            return ()
+        if not isinstance(components, list):
+            components = [components]
+
+        entries = []
+        for component in components:
+            text = component.getText().strip()
+            if not text:
+                continue
+            bounds = component.getBounds()
+            if int(bounds.right) <= int(bounds.left) or int(bounds.bottom) <= int(bounds.top):
+                continue
+            entries.append((int(bounds.top), int(bounds.left), text))
+        entries.sort(key=lambda item: (item[0], item[1]))
+        return tuple(item[2] for item in entries)
 
     @staticmethod
     def _normalize_destination_text(value: str) -> str:
@@ -944,28 +1014,44 @@ class OutboundHomePage(BasePage):
 
     def restore_top(self, *, max_swipes: int = 12) -> None:
         """测试结束后将首页恢复到顶部，避免污染后续用例。"""
-        first_screen_selectors = (
-            BY.xpath(self.SERVICE_TAB_ROW_XPATH),
-            BY.xpath(self.KINGKONG_ENTRY_GRID_XPATH),
+        # 搜索框和攻略分类栏会吸顶，不能作为“已回到顶部”的依据。
+        top_module_xpaths = (
+            self.SERVICE_TAB_ROW_XPATH,
+            self.KINGKONG_ENTRY_GRID_XPATH,
+            self.SCENIC_TICKET_ENTRY_XPATH,
         )
         for _ in range(max_swipes + 1):
             if (
-                self.find_xpath(self.REGION_SELECTOR_XPATH) is not None
-                and any(
-                    self.driver.wait_for_component(selector, timeout=0.3)
-                    is not None
-                    for selector in first_screen_selectors
-                )
+                self.find_xpath(self.HOME_ROOT_XPATH) is not None
+                and self._is_any_xpath_visibly_rendered(top_module_xpaths)
             ):
                 return
-            self.driver.swipe(
-                "DOWN",
-                distance=80,
-                start_point=(0.5, 0.25),
-                swipe_time=0.5,
-            )
-            time.sleep(0.4)
+            self._swipe_home_down()
         raise RuntimeError(f"[{self.PAGE_NAME}] 无法将首页恢复到顶部")
+
+    def _swipe_home_down(self) -> None:
+        """向首页顶部方向滑动，避开底部导航和吸顶分类栏。"""
+        self.driver.swipe(
+            "DOWN",
+            distance=90,
+            start_point=(0.5, 0.55),
+            swipe_time=0.5,
+        )
+        time.sleep(0.4)
+
+    def _is_any_xpath_visibly_rendered(self, xpaths: tuple[str, ...]) -> bool:
+        """判断任一真实顶部业务模块可见，过滤零尺寸/反向 bounds 的节点。"""
+        for xpath in xpaths:
+            component = self.driver.wait_for_component(
+                BY.xpath(xpath),
+                timeout=0.3,
+            )
+            if component is None:
+                continue
+            bounds = component.getBounds()
+            if int(bounds.right) > int(bounds.left) and int(bounds.bottom) > int(bounds.top):
+                return True
+        return False
 
     def wait_loaded(self, timeout: float = 8) -> bool:
         """等待首页标识元素出现。"""

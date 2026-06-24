@@ -7,7 +7,7 @@ from pages.base_page import BasePage
 
 class TripManagerPage(BasePage):
     PAGE_NAME = "TripManagerPage"
-    TRIP_LIST_XPATH = '//List[@scrollable="true"]'
+    TRIP_LIST_XPATH = '//*[@scrollable="true"]'
     CREATE_TRIP_TITLE_XPATH = '//Text[@text="创建行程"]'
     HOT_ROUTE_REFERENCE_XPATH = (
         '//Text[contains(@text, "参考热门路线") and contains(@text, "修改")]'
@@ -15,18 +15,47 @@ class TripManagerPage(BasePage):
     MY_TRIPS_TITLE_XPATH = '//Text[@text="我的行程"]'
     VIDEO_TUTORIAL_XPATH = '//Text[contains(@text, "查看视频教程")]'
     TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH = (
-        '//List[@scrollable="true"]//*[@clickable="true" '
+        '//*[@scrollable="true"]//*[@clickable="true" '
         'and .//Text[contains(@text, "天") and contains(@text, "地点")] '
         'and .//Text[contains(@text, "待规划")]]'
     )
     EDIT_TRIP_MENU_TITLE_XPATH = '//Text[@text="编辑行程"]'
     PIN_TRIP_ACTION_XPATH = '//Text[@text="置顶该行程"]'
     DELETE_TRIP_ACTION_XPATH = '//Text[@text="删除该行程"]'
+    DELETE_CONFIRM_DIALOG_XPATH = '//Dialog[.//Text[@text="删除"]]'
+    DELETE_CONFIRM_BUTTON_XPATH = '//Dialog//Text[@text="删除"]'
+    DELETE_CANCEL_BUTTON_XPATH = '//Dialog//Text[@text="取消"]'
     SCREEN_ROOT_XPATH = '//*[@id="HwAuthDialog_rootId"]'
+    BOTTOM_TRIP_TAB_XPATH = '//*[@id="HwAuthDialog_rootId"]//Text[@text="行程"]'
 
     @staticmethod
     def _xpath(xpath: str):
         return BY.xpath(xpath)
+
+    @staticmethod
+    def _bounds_tuple(component) -> tuple[int, int, int, int]:
+        bounds = component.getBounds()
+        return int(bounds.left), int(bounds.top), int(bounds.right), int(bounds.bottom)
+
+    @staticmethod
+    def _contains(
+        parent: tuple[int, int, int, int],
+        child: tuple[int, int, int, int],
+    ) -> bool:
+        return (
+            child[0] >= parent[0]
+            and child[1] >= parent[1]
+            and child[2] <= parent[2]
+            and child[3] <= parent[3]
+        )
+
+    @staticmethod
+    def _as_list(components) -> list:
+        if components is None:
+            return []
+        if isinstance(components, list):
+            return components
+        return [components]
 
     @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
@@ -49,13 +78,17 @@ class TripManagerPage(BasePage):
         return f'//Text[{cls._display_name_xpath_condition(trip_name)}]'
 
     @classmethod
+    def trip_list_title_xpath(cls, trip_name: str) -> str:
+        return f'//*[@scrollable="true"]//Text[{cls._display_name_xpath_condition(trip_name)}]'
+
+    @classmethod
     def route_trip_card_title_xpath(cls, trip_name: str) -> str:
         return f'//Text[{cls._display_name_xpath_condition(trip_name)}]'
 
     @classmethod
     def route_trip_card_summary_xpath(cls, trip_name: str) -> str:
         return (
-            f'//List[@scrollable="true"]//*[.//Text[{cls._display_name_xpath_condition(trip_name)}] '
+            f'//*[@scrollable="true"]//*[.//Text[{cls._display_name_xpath_condition(trip_name)}] '
             'and .//Text[contains(@text, "2") and contains(@text, "天")] '
             'and .//Text[contains(@text, "14")]]'
         )
@@ -63,7 +96,7 @@ class TripManagerPage(BasePage):
     @classmethod
     def trip_card_with_summary_xpath(cls, trip_name: str) -> str:
         return (
-            f'//List[@scrollable="true"]//*[@clickable="true" '
+            f'//*[@scrollable="true"]//*[@clickable="true" '
             f'and .//Text[{cls._display_name_xpath_condition(trip_name)}] '
             'and .//Text[contains(@text, "天") and contains(@text, "地点")]]'
         )
@@ -90,15 +123,32 @@ class TripManagerPage(BasePage):
 
     def wait_loaded(self, *, timeout: float = 8) -> None:
         """等待行程页核心区域加载完成。"""
-        self.wait_xpath(
-            self.CREATE_TRIP_TITLE_XPATH,
-            "行程页创建行程区域",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.HOT_ROUTE_REFERENCE_XPATH,
-            "参考热门路线修改入口",
-            timeout=timeout,
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if (
+                self.find_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
+                and self.find_xpath(self.MY_TRIPS_TITLE_XPATH) is not None
+            ):
+                return
+            if (
+                self.find_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
+                and self.find_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
+            ):
+                return
+            if (
+                self.find_xpath(self.SCREEN_ROOT_XPATH) is not None
+                and self.find_xpath(self.BOTTOM_TRIP_TAB_XPATH) is not None
+                and (
+                    self.find_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
+                    or self.find_xpath(self.MY_TRIPS_TITLE_XPATH) is not None
+                    or self.find_xpath(self.VIDEO_TUTORIAL_XPATH) is not None
+                )
+            ):
+                return
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未找到行程页核心区域，timeout={timeout}s"
         )
 
     def scroll_to_my_trips_area(self, *, max_swipes: int = 6) -> None:
@@ -160,11 +210,64 @@ class TripManagerPage(BasePage):
             f"[{self.PAGE_NAME}] 我的行程列表未找到字段完整的行程卡片"
         )
 
+    def visible_trip_cards_with_titles(self, *, max_swipes: int = 8) -> list[tuple]:
+        """返回当前我的行程可见区域内的行程卡片及标题，按从上到下排序。"""
+        self.scroll_to_trip_card_with_required_fields(max_swipes=max_swipes)
+        return self.current_visible_trip_cards_with_titles()
+
+    def current_visible_trip_cards_with_titles(self) -> list[tuple]:
+        """读取当前屏幕内已展示的行程卡片及标题，不额外滚动。"""
+        cards = self._as_list(
+            self.driver.find_all_components(
+                self._xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
+            )
+        )
+        text_components = self._as_list(
+            self.driver.find_all_components(
+                self._xpath('//*[@scrollable="true"]//Text')
+            )
+        )
+
+        card_infos = []
+        for card in cards:
+            title = self._trip_card_title(card, text_components)
+            if title:
+                card_infos.append((card, title))
+
+        card_infos.sort(key=lambda item: self._bounds_tuple(item[0])[1])
+        return card_infos
+
+    def _trip_card_title(self, card, text_components: list) -> str:
+        card_bounds = self._bounds_tuple(card)
+        title_candidates = []
+        for text_component in text_components:
+            text = text_component.getText().strip()
+            if (
+                not text
+                or ("天" in text and "地点" in text)
+                or "待规划" in text
+                or text in ("我的行程", "查看视频教程", "暂无更多数据")
+            ):
+                continue
+
+            text_bounds = self._bounds_tuple(text_component)
+            if self._contains(card_bounds, text_bounds):
+                title_candidates.append((text_bounds[1], text))
+
+        if not title_candidates:
+            return ""
+        title_candidates.sort(key=lambda item: item[0])
+        return title_candidates[0][1]
+
     def long_press_required_trip_card(self, *, press_time: float = 2.0):
         """长按当前可见的字段完整行程卡片。"""
         trip_card = self.wait_trip_card_with_required_fields(max_swipes=8)
         self.driver.long_click(trip_card, press_time=press_time)
         return trip_card
+
+    def long_press_trip_card(self, trip_card, *, press_time: float = 2.0) -> None:
+        """长按指定行程卡片。"""
+        self.driver.long_click(trip_card, press_time=press_time)
 
     def wait_edit_trip_menu_loaded(self, *, timeout: float = 8) -> None:
         """等待行程长按后的编辑菜单展示完整。"""
@@ -188,6 +291,100 @@ class TripManagerPage(BasePage):
         """点击编辑行程底部菜单关闭按钮。"""
         left, top, right, bottom = self.edit_menu_close_bounds(timeout=timeout)
         self.driver.click(((left + right) // 2, (top + bottom) // 2))
+
+    def tap_pin_trip_action(self, *, timeout: float = 8) -> None:
+        """点击编辑菜单中的“置顶该行程”。"""
+        self.tap_xpath(
+            self.PIN_TRIP_ACTION_XPATH,
+            "置顶该行程操作",
+            timeout=timeout,
+        )
+
+    def tap_delete_trip_action(self, *, timeout: float = 8) -> None:
+        """点击编辑菜单中的“删除该行程”。"""
+        self.tap_xpath(
+            self.DELETE_TRIP_ACTION_XPATH,
+            "删除该行程操作",
+            timeout=timeout,
+        )
+
+    def wait_delete_confirm_loaded(self, *, timeout: float = 8) -> None:
+        """等待删除行程二次确认弹窗展示。"""
+        self.wait_xpath(
+            self.DELETE_CONFIRM_DIALOG_XPATH,
+            "删除行程二次确认弹窗",
+            timeout=timeout,
+        )
+        self.wait_xpath(
+            self.DELETE_CONFIRM_BUTTON_XPATH,
+            "删除行程二次确认按钮",
+            timeout=timeout,
+        )
+
+    def tap_confirm_delete_trip(self, *, timeout: float = 8) -> None:
+        """在二次确认弹窗中点击“删除”。"""
+        self.tap_xpath(
+            self.DELETE_CONFIRM_BUTTON_XPATH,
+            "删除行程二次确认按钮",
+            timeout=timeout,
+        )
+
+    def wait_delete_confirm_closed(self, *, timeout: float = 5) -> None:
+        """等待删除行程二次确认弹窗消失。"""
+        self.driver.wait_for_component_disappear(
+            self._xpath(self.DELETE_CONFIRM_BUTTON_XPATH),
+            timeout=timeout,
+        )
+        if self.driver.wait_for_component(
+            self._xpath(self.DELETE_CONFIRM_BUTTON_XPATH),
+            timeout=0.5,
+        ) is not None:
+            raise RuntimeError(f"[{self.PAGE_NAME}] 删除确认弹窗关闭后仍然展示")
+
+    def wait_trip_title_absent(
+        self,
+        trip_name: str,
+        *,
+        timeout: float = 10,
+    ) -> None:
+        """等待当前行程列表可见区域内不再展示指定行程标题。"""
+        target_xpath = self.trip_list_title_xpath(trip_name)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.find_xpath(target_xpath) is None:
+                return
+            time.sleep(0.5)
+
+        visible_titles = [
+            title
+            for _, title in self.current_visible_trip_cards_with_titles()
+        ]
+        raise AssertionError(
+            f"删除后行程“{trip_name}”仍然展示，当前可见行程={visible_titles}"
+        )
+
+    def wait_first_trip_title(
+        self,
+        expected_title: str,
+        *,
+        timeout: float = 10,
+    ) -> None:
+        """等待目标行程展示在我的行程列表第一位。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            card_infos = self.visible_trip_cards_with_titles(max_swipes=2)
+            if card_infos and card_infos[0][1] == expected_title:
+                return
+            time.sleep(0.5)
+
+        visible_titles = [
+            title
+            for _, title in self.visible_trip_cards_with_titles(max_swipes=2)
+        ]
+        raise AssertionError(
+            f"目标行程未移动到列表首位，期望首位={expected_title!r}，"
+            f"当前可见顺序={visible_titles}"
+        )
 
     def edit_menu_close_bounds(self, *, timeout: float = 8) -> tuple[int, int, int, int]:
         """返回编辑行程菜单右上角关闭按钮的可点击区域。"""

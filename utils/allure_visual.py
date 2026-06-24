@@ -40,6 +40,38 @@ def _to_rect_tuple(bounds: Any) -> tuple[int, int, int, int]:
     raise ValueError(f"Unsupported bounds type: {type(bounds)}")
 
 
+def _normalize_rect(
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+    *,
+    width: int,
+    height: int,
+    margin: int,
+) -> tuple[int, int, int, int]:
+    """Normalize possibly reversed or out-of-screen bounds before drawing."""
+    x0, x1 = sorted((left, right))
+    y0, y1 = sorted((top, bottom))
+
+    x0 = max(0, min(width - 1, x0))
+    x1 = max(0, min(width - 1, x1))
+    y0 = max(0, min(height - 1, y0))
+    y1 = max(0, min(height - 1, y1))
+
+    l = max(0, x0 - margin)
+    t = max(0, y0 - margin)
+    r = min(width - 1, x1 + margin)
+    b = min(height - 1, y1 + margin)
+    if r <= l:
+        l = max(0, min(width - 2, l))
+        r = min(width - 1, l + 1)
+    if b <= t:
+        t = max(0, min(height - 2, t))
+        b = min(height - 1, t + 1)
+    return l, t, r, b
+
+
 def attach_fullscreen(driver: Any, name: str) -> None:
     """Capture current screen and attach it to Allure."""
     with TemporaryDirectory() as temp_dir:
@@ -122,10 +154,15 @@ def assert_visible_and_attach_highlight(
         with Image.open(saved_raw_jpeg_path) as raw_image:
             marked_image = raw_image.convert("RGB")
             draw = ImageDraw.Draw(marked_image)
-            l = max(0, left - margin)
-            t = max(0, top - margin)
-            r = min(marked_image.width - 1, right + margin)
-            b = min(marked_image.height - 1, bottom + margin)
+            l, t, r, b = _normalize_rect(
+                left,
+                top,
+                right,
+                bottom,
+                width=marked_image.width,
+                height=marked_image.height,
+                margin=margin,
+            )
             draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
             _attach_image(marked_image, f"{name}-圈选")
 
@@ -165,9 +202,14 @@ def attach_highlighted_bounds(
         with Image.open(saved_raw_jpeg_path) as raw_image:
             marked_image = raw_image.convert("RGB")
             draw = ImageDraw.Draw(marked_image)
-            l = max(0, left - margin)
-            t = max(0, top - margin)
-            r = min(marked_image.width - 1, right + margin)
-            b = min(marked_image.height - 1, bottom + margin)
+            l, t, r, b = _normalize_rect(
+                left,
+                top,
+                right,
+                bottom,
+                width=marked_image.width,
+                height=marked_image.height,
+                margin=margin,
+            )
             draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
             _attach_image(marked_image, f"{name}-圈选")

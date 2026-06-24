@@ -57,7 +57,7 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
         )
 
     with allure.step("步骤3：点击“第1天”标签下地点，校验地点详情信息和底部操作区"):
-        route_detail.tap_day_1_first_poi(timeout=10)
+        route_detail.tap_day_1_first_poi(timeout=10, verify_full_detail=True)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.POI_DETAIL_HEADER_XPATH),

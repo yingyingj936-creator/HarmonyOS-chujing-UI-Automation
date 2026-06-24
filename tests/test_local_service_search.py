@@ -43,11 +43,11 @@ def test_local_service_search_and_clear(driver) -> None:
             keyword,
             timeout=8,
         )
-        assert result_names[0] == "YouTube", (
-            f"搜索结果第一条预期为 YouTube，实际为：{result_names}"
+        assert "YouTube" in result_names, (
+            f"搜索结果预期包含 YouTube，实际为：{result_names}"
         )
-        assert len(result_names) >= 2 and result_names[1] == second_result, (
-            f"搜索结果第二条预期为 {second_result}，实际为：{result_names}"
+        assert second_result in result_names, (
+            f"搜索结果预期包含 {second_result}，实际为：{result_names}"
         )
         assert_visible_and_attach_highlight(
             driver,

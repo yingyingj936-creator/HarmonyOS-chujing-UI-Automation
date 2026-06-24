@@ -1,3 +1,4 @@
+import time
 from typing import Any
 
 from hypium import BY
@@ -27,6 +28,22 @@ class BasePage:
 
     def wait_xpath(self, xpath: str, name: str, *, timeout: float = 8) -> Any:
         return self.wait_component(BY.xpath(xpath), name, timeout=timeout)
+
+    def wait_any_xpath(
+        self,
+        xpaths: tuple[str, ...],
+        name: str,
+        *,
+        timeout: float = 8,
+    ) -> Any:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for xpath in xpaths:
+                component = self.find_xpath(xpath)
+                if component is not None:
+                    return component
+            time.sleep(0.3)
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到{name}，timeout={timeout}s")
 
     def wait_text(self, text: str, name: str | None = None, *, timeout: float = 8) -> Any:
         return self.wait_component(

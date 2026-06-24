@@ -14,7 +14,7 @@ class PoiDetailPage(BasePage):
 
     PAGE_NAME = "PoiDetailPage"
     BACK_BUTTON_XPATH_TEMPLATE = (
-        '//Row[./Column/Text[@text="{poi_name}"]]/Row[./Image]'
+        '//Row[.//Text[@text="{poi_name}"]]/Row[./Image]'
     )
     # HarmonyOS XPath 的 contains() 可能错误命中空文本，限定到 POI 主内容区。
     DETAIL_LINK_XPATH = (
@@ -26,7 +26,7 @@ class PoiDetailPage(BasePage):
     )
     ADD_TO_TRIP_XPATH = '//Text[@text="添加到我的行程"]'
     FAVORITE_BUTTON_XPATH = (
-        '//Row[./Row/Text[@text="导航"]]/Row[1]'
+        '//Row[.//Text[@text="导航"]]/Row[1]'
     )
     FAVORITE_SELECTED_BACKGROUND = "#1AFFBF00"
     BOOK_HOTEL_BUTTON_XPATH = (
@@ -40,7 +40,10 @@ class PoiDetailPage(BasePage):
     MAP_START_NAVIGATION_XPATH = (
         '//Button[@id="direction_routes_result_start_navigation_button"]'
     )
-    MAP_ROUTE_PANEL_XPATH = '//Text[@text="路线"]'
+    MAP_ROUTE_PANEL_XPATH = (
+        '//*[@id="direction_routes_result_start_navigation_button" '
+        'or @text="路线" or @text="花瓣地图" or contains(@text, "路线")]'
+    )
     PETAL_MAP_MARK_XPATH = '//Text[@text="花瓣地图"]'
     RECOMMENDATION_TITLE_XPATH = '//Text[@text="相关推荐"]'
     RECOMMENDATION_LIST_XPATH = (

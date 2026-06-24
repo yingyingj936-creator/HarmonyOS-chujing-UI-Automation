@@ -21,10 +21,12 @@ def test_home_waterfall_category_switching(driver) -> None:
         with allure.step("步骤1：查看首页攻略分类栏，默认显示发现瀑布流"):
             initial_post_ids = home.scroll_to_waterfall()
             for tab_name in CATEGORY_TABS[:-1]:
+                home.ensure_category_tab_visible(tab_name)
                 assert driver.wait_for_component(
                     BY.xpath(home.category_tab_xpath(tab_name)),
                     timeout=2,
                 ) is not None, f"首页攻略分类缺少“{tab_name}”"
+            home.ensure_category_tab_visible("发现")
             assert_visible_and_attach_highlight(
                 driver,
                 BY.xpath(home.category_tab_xpath("发现")),

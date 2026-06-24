@@ -45,6 +45,29 @@ def _open_service_from_local_list(
         local_service.wait_search_cleared(timeout=8)
 
 
+def _return_home(home: OutboundHomePage, *, max_back_count: int = 6) -> None:
+    """从服务页或服务列表回到出境服务首页。"""
+    for _ in range(max_back_count + 1):
+        if home.wait_loaded(timeout=1) and home.is_at_home():
+            return
+        home.driver.press_back()
+
+    if home.wait_loaded(timeout=3) and home.is_at_home():
+        return
+
+    raise RuntimeError("未能返回首页，无法从首页打开多任务列表")
+
+
+def _open_multitask_from_home(
+    home: OutboundHomePage,
+    multitask: MultiTaskPage,
+) -> None:
+    """回到首页后点击首页多任务入口，避免依赖三方服务内浮窗定位。"""
+    _return_home(home)
+    home.ensure_kingkong_first_page()
+    multitask.open()
+
+
 def _prepare_external_tasks(
     home: OutboundHomePage,
     local_service: LocalServicePage,
@@ -58,48 +81,23 @@ def _prepare_external_tasks(
         "本地服务列表页",
         timeout=10,
     )
-    for index, service_name in enumerate(service_names):
+    for service_name in service_names:
         _open_service_from_local_list(
             local_service,
             service_page,
             service_name,
-            stay_in_service=index == len(service_names) - 1,
         )
+    _return_home(home)
     return service_names
 
 
 def _reopen_multitask_from_home(
     home: OutboundHomePage,
-    local_service: LocalServicePage,
-    service_page: ServiceDetailPage,
     multitask: MultiTaskPage,
-    *,
-    fallback_service: str,
 ) -> None:
     if multitask.is_open():
         return
-
-    for _ in range(5):
-        if home.wait_loaded(timeout=1):
-            break
-        home.driver.press_back()
-    if not home.wait_loaded(timeout=3):
-        raise RuntimeError("删除任务后未能返回首页，无法重新打开多任务列表")
-
-    home.ensure_kingkong_first_page()
-    home.tap_local_service_entry()
-    local_service.wait_xpath(
-        local_service.PAGE_TITLE_XPATH,
-        "本地服务列表页",
-        timeout=10,
-    )
-    _open_service_from_local_list(
-        local_service,
-        service_page,
-        fallback_service,
-        stay_in_service=True,
-    )
-    multitask.open()
+    _open_multitask_from_home(home, multitask)
 
 
 @allure.feature("出境服务卡片")
@@ -120,7 +118,7 @@ def test_multitask_delete_clear_and_close(driver) -> None:
             )
 
         with allure.step("步骤1：打开多任务列表，校验任务计数与卡片数量一致"):
-            multitask.open()
+            _open_multitask_from_home(home, multitask)
             initial_count, initial_titles = multitask.wait_count_consistent(
                 timeout=12,
             )
@@ -143,20 +141,9 @@ def test_multitask_delete_clear_and_close(driver) -> None:
 
         with allure.step("步骤2：删除一个三方服务，其它任务继续展示"):
             deleted_title = multitask.delete_first_external_task()
-            fallback_service = next(
-                (
-                    service_name
-                    for service_name in prepared_services
-                    if service_name != deleted_title
-                ),
-                prepared_services[0],
-            )
             _reopen_multitask_from_home(
                 home,
-                local_service,
-                service_page,
                 multitask,
-                fallback_service=fallback_service,
             )
             remaining_count, remaining_titles = multitask.wait_count_consistent(
                 timeout=8,

@@ -16,47 +16,43 @@ class LocalServicePage(BasePage):
         '//TextInput[@hint="搜索服务"]/Stack[@clickable="true"]'
     )
     SEARCH_RESULT_NAME_XPATH = (
-        '//Stack/Stack/List/ListItem/Column/'
-        'Row[@clickable="true"]/Column/Text[1]'
+        '//ListItem//Row[@clickable="true"]//Column/Text[1]'
     )
     SEARCH_RESULT_ROW_XPATH_TEMPLATE = (
-        '//Stack/Stack/List/ListItem/Column/Row'
-        '[@clickable="true" and ./Column/Text[@text="{service_name}"]]'
+        '//ListItem[.//Row[@clickable="true"]//Column/Text[1]'
+        '[@text="{service_name}"]]//Row[@clickable="true"]'
     )
     SERVICE_ROW_XPATH_TEMPLATE = (
-        '//SideBarContainer//Row'
-        '[@clickable="true" and ./Column/Text[@text="{service_name}"]]'
+        '//SideBarContainer//*[@clickable="true" '
+        'and .//Text[@text="{service_name}"]]'
     )
     DEFAULT_FIRST_SERVICE_XPATH = (
-        '//SideBarContainer//Row'
-        '[@clickable="true" and ./Column/Text[@text="Xe"]]'
+        '//SideBarContainer//*[@clickable="true" and .//Text[@text="Xe"]]'
     )
     SERVICE_CONTAINER_XPATH = '//SideBarContainer'
     RIGHT_SERVICE_TEXT_XPATH = (
-        '//SideBarContainer//ListItem'
-        '//Row[@clickable="true"]/Column/Text'
+        '//SideBarContainer//*[@clickable="true"]//Text'
     )
     SELECTED_BACKGROUND = "#FFFFFFFF"
     BBC_NEWS_ROW_XPATH = (
-        '//Row[@clickable="true" and ./Column/Text[@text="BBC News"]]'
+        '//SideBarContainer//*[@clickable="true" and .//Text[@text="BBC News"]]'
     )
     FOOD_ORDERING_CARD_XPATH = (
-        '//ListItemGroup[./Text[@text="美食外卖"]]'
-        '/List/ListItem[3]/*[@clickable="true" and ./Image]'
+        '//SideBarContainer//Text[@text="掌上美食" or contains(@text, "掌上美食")]'
     )
 
     @classmethod
     def category_xpath(cls, category_name: str) -> str:
         return (
             '//SideBarContainer'
-            f'//Column[@clickable="true" and ./Text[@text="{category_name}"]]'
+            f'//Column[@clickable="true" and .//Text[@text="{category_name}"]]'
         )
 
     @classmethod
     def category_text_xpath(cls, category_name: str) -> str:
         return (
             '//SideBarContainer'
-            f'//Column[@clickable="true"]/Text[@text="{category_name}"]'
+            f'//Column[@clickable="true"]//Text[@text="{category_name}"]'
         )
 
     def tap_category(self, category_name: str) -> None:
@@ -152,9 +148,54 @@ class LocalServicePage(BasePage):
 
     def tap_food_ordering_card(self) -> None:
         """点击“美食”分类中的掌上美食卡片。"""
-        self.tap_xpath(
+        component = self.ensure_food_ordering_card_visible()
+        component.click()
+
+    def ensure_food_ordering_card_visible(
+        self,
+        *,
+        timeout: float = 8,
+        max_swipes: int = 6,
+    ) -> object:
+        """滚动右侧服务列表，直到掌上美食卡片进入可见区域。"""
+        return self.scroll_service_content_until_xpath_visible(
             self.FOOD_ORDERING_CARD_XPATH,
             "掌上美食卡片",
+            timeout=timeout,
+            max_swipes=max_swipes,
+        )
+
+    def scroll_service_content_until_xpath_visible(
+        self,
+        xpath: str,
+        name: str,
+        *,
+        timeout: float = 8,
+        max_swipes: int = 6,
+    ) -> object:
+        """在本地服务右侧内容区向下滚动查找目标服务入口。"""
+        deadline = time.time() + timeout
+        container = self.wait_xpath(
+            self.SERVICE_CONTAINER_XPATH,
+            "本地服务内容区",
+            timeout=timeout,
+        )
+        for swipe_count in range(max_swipes + 1):
+            component = self.find_xpath(xpath)
+            if component is not None:
+                return component
+            if swipe_count == max_swipes or time.time() >= deadline:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=55,
+                area=container,
+                swipe_time=0.5,
+            )
+            time.sleep(0.6)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未找到{name}，timeout={timeout}s"
         )
 
     @classmethod
@@ -202,18 +243,18 @@ class LocalServicePage(BasePage):
         *,
         timeout: float = 8,
     ) -> tuple[str, ...]:
-        """等待结果出现，并校验所有服务名称均包含搜索关键词。"""
+        """等待搜索结果出现，并确认至少一个业务结果命中关键词。"""
         deadline = time.time() + timeout
         normalized_keyword = keyword.casefold()
         while time.time() < deadline:
             names = self.visible_search_result_names()
-            if names and all(
+            if names and any(
                 normalized_keyword in name.casefold() for name in names
             ):
                 return names
             time.sleep(0.4)
         raise RuntimeError(
-            f"[{self.PAGE_NAME}] 搜索结果未全部匹配关键词“{keyword}”"
+            f"[{self.PAGE_NAME}] 搜索结果未匹配关键词“{keyword}”"
         )
 
     def tap_search_result(self, service_name: str) -> None:

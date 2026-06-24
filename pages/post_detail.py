@@ -14,7 +14,7 @@ class PostDetailPage(BasePage):
     PAGE_NAME = "PostDetailPage"
     ROOT_XPATH = '//*[@id="ezLongTake_PostPage_StackId"]'
     CONTENT_LIST_XPATH = f'{ROOT_XPATH}//List'
-    BACK_BUTTON_XPATH = f'{ROOT_XPATH}/Stack/Stack/Column/Row/Row[@clickable="true"]'
+    BACK_BUTTON_XPATH = f'{ROOT_XPATH}//Row[@clickable="true" and ./Image]'
     GALLERY_XPATH = f'{CONTENT_LIST_XPATH}//__Common__[@clickable="true"]'
     BODY_TEXT_XPATH = f'{CONTENT_LIST_XPATH}//Text[@clickable="true"]'
     VIEW_ROW_XPATH = f'{CONTENT_LIST_XPATH}/ListItem/Row/Row[2]/Row[1]'
@@ -30,9 +30,9 @@ class PostDetailPage(BasePage):
         '//Text[starts-with(@text, "更多")]'
     )
     RELATED_WATERFALL_XPATH = f'{CONTENT_LIST_XPATH}//WaterFlow'
-    FIRST_RELATED_CARD_XPATH = f'{RELATED_WATERFALL_XPATH}/Column[1]'
-    FIRST_RELATED_CARD_COVER_XPATH = f'{FIRST_RELATED_CARD_XPATH}/__Common__[1]'
-    FIRST_RELATED_CARD_TITLE_XPATH = f'{FIRST_RELATED_CARD_XPATH}/Text[1]'
+    FIRST_RELATED_CARD_XPATH = f'{RELATED_WATERFALL_XPATH}//Column[.//Text][1]'
+    FIRST_RELATED_CARD_COVER_XPATH = f'{FIRST_RELATED_CARD_XPATH}//__Common__[@clickable="true"]'
+    FIRST_RELATED_CARD_TITLE_XPATH = f'{FIRST_RELATED_CARD_XPATH}//Text[1]'
     PAGE_INDICATOR_PATTERN = re.compile(r"^\d+/\d+$")
     STAT_TEXT_PATTERN = re.compile(r"^\d+(?:\.\d+)?万?$")
 

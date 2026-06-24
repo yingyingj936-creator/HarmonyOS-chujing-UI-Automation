@@ -32,7 +32,9 @@ class FoodOrderingPage(BasePage):
     ORDER_TEXT_XPATH = (
         '//Tabs//ListItem//Row[@clickable="true"]/Column/Text'
     )
-    CATEGORY_BAR_XPATH = '//ListItem[@clickable="true" and ./Text[@text="海鲜"]]'
+    CATEGORY_BAR_XPATH = (
+        '//Tabs//List[@scrollable="true" and .//Text[@text="海鲜"]]'
+    )
     SELECTED_BACKGROUND = "#E6000000"
     LIGE_ROW_XPATH = (
         '//Tabs//Row[@clickable="true" and ./Column/Text[@text="立哥"]]'
@@ -49,14 +51,14 @@ class FoodOrderingPage(BasePage):
     def category_xpath(cls, category_name: str) -> str:
         return (
             '//ListItem[@clickable="true"]'
-            f'/Text[@text="{category_name}"]'
+            f'//Text[@text="{category_name}"]'
         )
 
     @classmethod
     def category_item_xpath(cls, category_name: str) -> str:
         return (
             '//ListItem[@clickable="true" '
-            f'and ./Text[@text="{category_name}"]]'
+            f'and .//Text[@text="{category_name}"]]'
         )
 
     def tap_category(self, category_name: str) -> None:
@@ -71,31 +73,32 @@ class FoodOrderingPage(BasePage):
         self,
         category_name: str,
         *,
-        max_swipes: int = 6,
+        max_swipes: int = 8,
     ) -> None:
         """横向滚动顶部分类栏，直到目标分类进入当前 UI 树。"""
         if self.find_xpath(self.category_item_xpath(category_name)) is not None:
             return
 
-        for _ in range(max_swipes):
-            category_bar = self.find_xpath(self.CATEGORY_BAR_XPATH)
-            if category_bar is not None:
-                self.driver.swipe(
-                    "LEFT",
-                    distance=55,
-                    area=category_bar,
-                    swipe_time=0.45,
-                )
-            else:
-                self.driver.swipe(
-                    "LEFT",
-                    distance=55,
-                    start_point=(0.86, 0.19),
-                    swipe_time=0.45,
-                )
-            time.sleep(0.35)
-            if self.find_xpath(self.category_item_xpath(category_name)) is not None:
-                return
+        for direction in ("LEFT", "RIGHT"):
+            for _ in range(max_swipes):
+                category_bar = self.find_xpath(self.CATEGORY_BAR_XPATH)
+                if category_bar is not None:
+                    self.driver.swipe(
+                        direction,
+                        distance=70,
+                        area=category_bar,
+                        swipe_time=0.45,
+                    )
+                else:
+                    self.driver.swipe(
+                        direction,
+                        distance=70,
+                        start_point=(0.86 if direction == "LEFT" else 0.18, 0.19),
+                        swipe_time=0.45,
+                    )
+                time.sleep(0.35)
+                if self.find_xpath(self.category_item_xpath(category_name)) is not None:
+                    return
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 横向浏览分类栏后仍未看到“{category_name}”"

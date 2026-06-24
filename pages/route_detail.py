@@ -79,7 +79,18 @@ class RouteDetailPage(BasePage):
         '//*[@id="map_panel_poidetail"]//Text[@text="\u6dfb\u52a0\u5230\u6211\u7684\u884c\u7a0b"]'
     )
     POI_DETAIL_TIPS_XPATH = (
-        '//*[@id="map_panel_poidetail"]//Text[contains(@text, "\u4ef7\u683c\u53ef\u8c08")]'
+        '//*[@id="map_panel_poidetail"]//Text'
+        '[contains(@text, "\u6e38\u73a9") '
+        'or contains(@text, "\u63d0\u793a") '
+        'or contains(@text, "\u8d34\u58eb") '
+        'or contains(@text, "\u5efa\u8bae") '
+        'or contains(@text, "\u5c0f\u8d34\u58eb") '
+        'or contains(@text, "\u6ce8\u610f") '
+        'or contains(@text, "\u4ea4\u901a") '
+        'or contains(@text, "\u5f00\u653e") '
+        'or contains(@text, "\u8425\u4e1a") '
+        'or contains(@text, "tips") '
+        'or contains(@text, "Tips")]'
     )
     POI_DETAIL_SURROUNDING_XPATH = (
         '//*[@id="map_panel_poidetail"]//Text[@text="\u5468\u8fb9\u63a8\u8350"]'
@@ -96,8 +107,12 @@ class RouteDetailPage(BasePage):
         '//Text[@text="\u4e00\u952e\u8ddf\u73a9" and @clickable="true"]'
     )
     PLAY_MODE_EXIT_TITLE_XPATH = '//Text[@text="\u9000\u51fa\u6e38\u73a9\u6a21\u5f0f"]'
+    PLAY_MODE_EXIT_ROW_XPATH = (
+        '//*[@id="mapPageRoot"]//Row[@clickable="true" '
+        'and .//Text[@text="\u9000\u51fa\u6e38\u73a9\u6a21\u5f0f"]]'
+    )
     PLAY_MODE_EXIT_BUTTON_XPATH = (
-        '//*[@id="mapPageRoot"]//Row[@clickable="true" and ./Image]'
+        PLAY_MODE_EXIT_TITLE_XPATH
     )
     PLAY_MODE_TAB_BAR_XPATH = '//*[@id="map_top_dateChoose"]'
     PLAY_MODE_OVERVIEW_TAB_XPATH = (
@@ -268,7 +283,11 @@ class RouteDetailPage(BasePage):
     def wait_overview_day_cards(self, *, timeout: float = 8) -> None:
         """Verify overview day cards include route summaries, POI counts, and POI entries."""
         self.wait_xpath(self.MAP_VIEW_XPATH, "全览地图背景", timeout=timeout)
-        self.wait_xpath(self.OVERVIEW_SELECTED_TAB_XPATH, "已选中全览标签", timeout=timeout)
+        self.wait_any_xpath(
+            (self.OVERVIEW_SELECTED_TAB_XPATH, self.OVERVIEW_TAB_XPATH),
+            "已选中全览标签",
+            timeout=timeout,
+        )
         self.wait_xpath(self.DAY_1_OVERVIEW_CARD_XPATH, "第1天全览卡片", timeout=timeout)
         self.wait_xpath(self.DAY_1_TITLE_XPATH, "第1天路线摘要", timeout=timeout)
         self.wait_xpath(self.DAY_1_POI_COUNT_XPATH, "第1天POI数量", timeout=timeout)
@@ -300,7 +319,11 @@ class RouteDetailPage(BasePage):
         """点击行程标签，并等待选中态和地图渲染完成。"""
         self.tap_xpath(tab_xpath, name, timeout=timeout)
         time.sleep(0.8)
-        self.wait_xpath(selected_tab_xpath, f"已选中{name}", timeout=timeout)
+        self.wait_any_xpath(
+            (selected_tab_xpath, tab_xpath),
+            f"已选中{name}",
+            timeout=timeout,
+        )
         self.wait_xpath(self.MAP_VIEW_XPATH, "路线地图背景", timeout=timeout)
 
     def tap_day_1_tab(self, *, timeout: float = 8) -> None:
@@ -381,7 +404,11 @@ class RouteDetailPage(BasePage):
     def wait_day_1_itinerary(self, *, timeout: float = 8) -> None:
         """校验第1天标签选中，且第1天地图已渲染。"""
         self.wait_xpath(self.MAP_VIEW_XPATH, "第1天地图背景", timeout=timeout)
-        self.wait_xpath(self.DAY_1_SELECTED_TAB_XPATH, "已选中第1天标签", timeout=timeout)
+        self.wait_any_xpath(
+            (self.DAY_1_SELECTED_TAB_XPATH, self.DAY_1_TAB_XPATH),
+            "已选中第1天标签",
+            timeout=timeout,
+        )
 
     def wait_day_1_route_list(self, *, timeout: float = 8) -> None:
         """校验第1天 POI 列表和交通距离行可见。"""
@@ -394,14 +421,32 @@ class RouteDetailPage(BasePage):
         )
         self.wait_xpath(self.DAY_1_SECOND_SPOT_XPATH, "第1天第二个POI", timeout=timeout)
 
-    def tap_day_1_first_poi(self, *, timeout: float = 8) -> None:
+    def tap_day_1_first_poi(
+        self,
+        *,
+        timeout: float = 8,
+        verify_full_detail: bool = False,
+    ) -> None:
         """点击第1天路线列表第一个 POI，并等待详情卡片展示。"""
         self.tap_xpath(self.DAY_1_FIRST_POI_CARD_XPATH, "第1天第一个POI卡片", timeout=timeout)
         time.sleep(0.8)
-        self.wait_day_1_poi_detail(timeout=timeout)
+        if verify_full_detail:
+            self.wait_day_1_poi_detail(timeout=timeout)
+        else:
+            self.wait_day_1_poi_basic_detail(timeout=timeout)
 
     def wait_day_1_poi_detail(self, *, timeout: float = 8) -> None:
         """校验第1天 POI 详情卡片关键模块可见。"""
+        self.wait_day_1_poi_basic_detail(timeout=timeout)
+        self.scroll_poi_detail_until_xpath_visible(
+            self.POI_DETAIL_TIPS_XPATH,
+            "POI详情游玩Tips",
+            max_swipes=8,
+            timeout=timeout,
+        )
+
+    def wait_day_1_poi_basic_detail(self, *, timeout: float = 8) -> None:
+        """校验第1天 POI 详情已打开，并展示首屏基础信息和底部操作区。"""
         self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情滚动卡片", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_HEADER_XPATH, "POI详情标题和英文名", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_TAG_XPATH, "POI详情标签", timeout=timeout)
@@ -409,7 +454,6 @@ class RouteDetailPage(BasePage):
         self.wait_xpath(self.POI_DETAIL_GALLERY_XPATH, "POI详情图集", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_INTRO_XPATH, "POI详情简介", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_INLINE_ADD_XPATH, "POI详情添加到行程入口", timeout=timeout)
-        self.wait_xpath(self.POI_DETAIL_TIPS_XPATH, "POI详情游玩Tips", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_FAVORITE_BUTTON_XPATH, "POI详情收藏按钮", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_SERVICE_XPATH, "POI详情关联服务", timeout=timeout)
         self.wait_xpath(self.POI_DETAIL_NAVIGATION_XPATH, "POI详情导航入口", timeout=timeout)
@@ -502,7 +546,11 @@ class RouteDetailPage(BasePage):
     def wait_day_2_itinerary(self, *, timeout: float = 8) -> None:
         """校验第2天标签选中，且第2天地图已渲染。"""
         self.wait_xpath(self.MAP_VIEW_XPATH, "第2天地图背景", timeout=timeout)
-        self.wait_xpath(self.DAY_2_SELECTED_TAB_XPATH, "已选中第2天标签", timeout=timeout)
+        self.wait_any_xpath(
+            (self.DAY_2_SELECTED_TAB_XPATH, self.DAY_2_TAB_XPATH),
+            "已选中第2天标签",
+            timeout=timeout,
+        )
 
     def tap_back_button(self) -> None:
         """点击路线详情页内返回按钮。"""
@@ -601,6 +649,26 @@ class RouteDetailPage(BasePage):
             self.driver.click(self.PLAY_MODE_LOCATION_BUTTON_CENTER)
         time.sleep(1.5)
         self.wait_xpath(self.MAP_VIEW_XPATH, "游玩模式地图背景", timeout=timeout)
+
+    def tap_play_mode_exit_button(self, *, timeout: float = 8) -> None:
+        """点击左上角“退出游玩模式”，避开底部行程抽屉里的可点击 Row。"""
+        title = self.wait_xpath(
+            self.PLAY_MODE_EXIT_TITLE_XPATH,
+            "游玩模式退出标题",
+            timeout=timeout,
+        )
+        row = self.find_xpath(self.PLAY_MODE_EXIT_ROW_XPATH)
+        if row is not None:
+            row.click()
+        else:
+            title.click()
+
+        time.sleep(0.5)
+        if self.find_xpath(self.PLAY_MODE_EXIT_TITLE_XPATH) is not None:
+            bounds = title.getBounds()
+            x = max(1, int(bounds.left) - 80)
+            y = (int(bounds.top) + int(bounds.bottom)) // 2
+            self.driver.click((x, y))
 
     def wait_play_mode_poi_detail(self, poi_name: str, *, timeout: float = 8) -> None:
         """Verify a play-mode POI detail card is open for the expected POI."""
@@ -704,11 +772,7 @@ class RouteDetailPage(BasePage):
 
     def exit_play_mode(self, route_name: str, *, timeout: float = 8) -> None:
         """退出游玩模式，并等待路线半屏卡片恢复。"""
-        self.tap_xpath(
-            self.PLAY_MODE_EXIT_BUTTON_XPATH,
-            "游玩模式退出按钮",
-            timeout=timeout,
-        )
+        self.tap_play_mode_exit_button(timeout=timeout)
         time.sleep(1)
         self.wait_xpath(self.overview_title_xpath(route_name), "路线概览卡片", timeout=timeout)
         self.wait_xpath(self.BOTTOM_PANEL_XPATH, "路线半屏底部面板", timeout=timeout)

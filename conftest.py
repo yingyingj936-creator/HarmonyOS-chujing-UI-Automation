@@ -56,6 +56,12 @@ FILE_ORDER = {
     "test_trip_reference_hot_routes.py": 41,
     "test_trip_reference_route_join_trip.py": 42,
     "test_trip_long_press_edit_menu.py": 43,
+    "test_trip_pin_second_card.py": 44,
+    "test_trip_detail_layout.py": 45,
+    "test_trip_detail_view_map_play_mode.py": 46,
+    "test_trip_detail_rename.py": 47,
+    "test_trip_detail_edit_page.py": 48,
+    "test_trip_delete_card.py": 49,
 }
 
 
@@ -153,7 +159,7 @@ def app_settings(pytestconfig: pytest.Config) -> AppSettings:
 
 def _start_outbound_service(settings: AppSettings) -> None:
     """启动出境服务元服务并等待页面完成渲染。"""
-    subprocess.run(
+    result = subprocess.run(
         [
             _hdc_executable(),
             "-t",
@@ -166,8 +172,20 @@ def _start_outbound_service(settings: AppSettings) -> None:
             "-a",
             settings.ability,
         ],
-        check=True,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
+    output = f"{result.stdout}\n{result.stderr}"
+    if "screen is locked" in output or "unlock screen failed" in output:
+        raise RuntimeError(
+            "检测到设备处于锁屏状态，无法启动出境服务。"
+            "请手动解锁设备并保持屏幕常亮后重新运行用例。"
+        )
+    if result.returncode != 0:
+        raise RuntimeError(f"启动出境服务失败：\n{output.strip()}")
     time.sleep(settings.startup_wait_seconds)
 
 
@@ -225,6 +243,16 @@ def _restore_default_destination(driver, settings: AppSettings) -> bool:
 
     if driver.wait_for_component(destination_selector, timeout=1) is not None:
         return True
+    if settings.default_destination == "中国香港":
+        hong_kong_content = driver.wait_for_component(
+            BY.xpath(
+                '//*[@id="TabHomeCompRoot"]//Text'
+                '[contains(@text, "香港") or contains(@text, "港澳")]'
+            ),
+            timeout=1,
+        )
+        if hong_kong_content is not None:
+            return True
 
     try:
         home.tap_region_selector()
@@ -334,4 +362,3 @@ def pytest_collection_modifyitems(
         key=lambda pair: (FILE_ORDER.get(_item_filename(pair[1]), 999), pair[0])
     )
     items[:] = [item for _, item in indexed_items]
-

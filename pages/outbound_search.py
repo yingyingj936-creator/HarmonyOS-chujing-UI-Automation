@@ -28,8 +28,23 @@ class OutboundSearchPage(BasePage):
         '//*[@id="GlobalSearchResultComp"]//WaterFlow[@scrollable="true"]'
     )
     LATEST_GUIDE_TITLE_XPATH = (
-        f'{LATEST_GUIDES_LIST_XPATH}/Column/Text[1]'
+        f'{LATEST_GUIDES_LIST_XPATH}//Text'
     )
+
+    @staticmethod
+    def _xpath_literal(value: str) -> str:
+        if '"' not in value:
+            return f'"{value}"'
+        if "'" not in value:
+            return f"'{value}'"
+        parts = value.split('"')
+        concat_parts = []
+        for index, part in enumerate(parts):
+            if part:
+                concat_parts.append(f'"{part}"')
+            if index != len(parts) - 1:
+                concat_parts.append("'\"'")
+        return "concat(" + ", ".join(concat_parts) + ")"
 
     @staticmethod
     def placeholder_xpath(destination: str) -> str:
@@ -83,7 +98,10 @@ class OutboundSearchPage(BasePage):
     @classmethod
     def latest_guide_title_xpath(cls, title: str) -> str:
         """生成当前可见攻略标题的 XPath。"""
-        return f'{cls.LATEST_GUIDE_TITLE_XPATH}[@text="{title}"]'
+        return (
+            f'{cls.LATEST_GUIDES_LIST_XPATH}//Text'
+            f'[@text={cls._xpath_literal(title)}]'
+        )
 
     def tap_home_search(self) -> None:
         """步骤：从首页点击搜索框进入搜索页"""
@@ -221,7 +239,20 @@ class OutboundSearchPage(BasePage):
             self.LATEST_GUIDES_LIST_XPATH,
             "最新攻略瀑布流",
         )
-        visible_titles = self._visible_latest_guide_titles()
+        visible_titles = ()
+        for pre_swipe_count in range(4):
+            visible_titles = self._visible_latest_guide_titles()
+            if visible_titles:
+                break
+            if pre_swipe_count == 3:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=45,
+                start_point=(0.5, 0.84),
+                swipe_time=0.5,
+            )
+            time.sleep(0.8)
         if not visible_titles:
             raise RuntimeError(
                 f"[{self.PAGE_NAME}] 最新攻略首屏没有可识别的帖子标题"
@@ -280,9 +311,24 @@ class OutboundSearchPage(BasePage):
             components = [components]
 
         titles = []
+        excluded_texts = {
+            "服务",
+            "路线",
+            "地点",
+            "最新攻略",
+            "搜索",
+            "综合",
+            "攻略",
+        }
         for component in components:
             text = component.getText().strip()
-            if text and text not in titles:
+            normalized = text.replace(",", "")
+            if (
+                len(text) >= 2
+                and not normalized.isdigit()
+                and text not in excluded_texts
+                and text not in titles
+            ):
                 titles.append(text)
         return tuple(titles)
 
