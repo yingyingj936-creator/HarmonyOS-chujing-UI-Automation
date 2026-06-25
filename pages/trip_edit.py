@@ -475,6 +475,31 @@ class TripEditPage(BasePage):
         self.driver.swipe("UP", distance=65, area=child_list, swipe_time=0.55)
         time.sleep(0.8)
 
+    def drag_child_poi_below(
+        self,
+        source_poi: str,
+        target_poi: str,
+        *,
+        timeout: float = 8,
+    ) -> tuple[Any, Any]:
+        """长按拖拽当前 Day 列表中的 POI 到目标 POI 下方。"""
+        source_card = self.child_poi_card(source_poi, timeout=timeout)
+        target_card = self.child_poi_card(target_poi, timeout=timeout)
+        source_bounds = source_card.getBounds()
+        target_bounds = target_card.getBounds()
+        start = (
+            (int(source_bounds.left) + int(source_bounds.right)) // 2,
+            (int(source_bounds.top) + int(source_bounds.bottom)) // 2,
+        )
+        end_y = int(target_bounds.bottom) + max(12, (int(target_bounds.bottom) - int(target_bounds.top)) // 4)
+        end = (
+            (int(target_bounds.left) + int(target_bounds.right)) // 2,
+            end_y,
+        )
+        self.driver.drag(start, end, press_time=1.2, drag_time=1.1)
+        time.sleep(1.5)
+        return source_card, target_card
+
     def scroll_child_list_until_poi_visible(
         self,
         poi_name: str,

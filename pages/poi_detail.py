@@ -13,12 +13,17 @@ class PoiDetailPage(BasePage):
     """POI 详情页面对象。"""
 
     PAGE_NAME = "PoiDetailPage"
+    POI_DETAIL_ROOT_XPATH = '//*[@id="map_panel_poidetail"]'
     BACK_BUTTON_XPATH_TEMPLATE = (
         '//Row[.//Text[@text="{poi_name}"]]/Row[./Image]'
     )
     # HarmonyOS XPath 的 contains() 可能错误命中空文本，限定到 POI 主内容区。
     DETAIL_LINK_XPATH = (
         '//*[@id="map_panel_poidetail"]//Text[@clickable="true"]'
+    )
+    GALLERY_XPATH_CANDIDATES = (
+        '//*[@id="map_panel_poidetail"]//ListItem/__Common__[@clickable="true"]',
+        '//SheetPage[.//Text[@text="导航"]]//__Common__[@clickable="true"]',
     )
     LOCATION_DETAIL_TITLE_XPATH = '//Text[@text="地点详情"]'
     LOCATION_DETAIL_BACK_XPATH = (
@@ -28,6 +33,9 @@ class PoiDetailPage(BasePage):
     FAVORITE_BUTTON_XPATH = (
         '//Row[.//Text[@text="导航"]]/Row[1]'
     )
+    LOCATION_BUTTON_XPATH = (
+        '//Row[.//Text[@text="导航"]]/Row[2]'
+    )
     FAVORITE_SELECTED_BACKGROUND = "#1AFFBF00"
     BOOK_HOTEL_BUTTON_XPATH = (
         '//Row[@clickable="true" and ./Text[@text="订酒店"]]'
@@ -35,6 +43,10 @@ class PoiDetailPage(BasePage):
     NAVIGATION_BUTTON_XPATH = (
         '//Row[@clickable="true" and ./Text[@text="导航"]]'
     )
+    REVIEW_BUTTON_XPATH = (
+        '//Row[@clickable="true" and ./Text[@text="看点评"]]'
+    )
+    SERVICE_TITLE_XPATH = '//Text[@id="title"]'
     BOOKING_TITLE_XPATH = '//Text[@id="title" and @text="Booking"]'
     TASK_LIMIT_CONTINUE_XPATH = '//Text[@text="继续"]'
     MAP_START_NAVIGATION_XPATH = (
@@ -48,6 +60,9 @@ class PoiDetailPage(BasePage):
     RECOMMENDATION_TITLE_XPATH = '//Text[@text="相关推荐"]'
     RECOMMENDATION_LIST_XPATH = (
         '//*[@id="discovery_list_poidetail"]'
+    )
+    RATING_XPATH = (
+        '//*[@id="map_panel_poidetail"]//Text[starts-with(@text, "评分 ")]'
     )
 
     @staticmethod
@@ -111,6 +126,84 @@ class PoiDetailPage(BasePage):
         """点击地点详情页顶部栏的页面内返回按钮。"""
         self.tap_xpath(self.LOCATION_DETAIL_BACK_XPATH, "地点详情返回按钮")
 
+    def wait_detail_loaded(self, poi_name: str, *, timeout: float = 10) -> None:
+        """等待 POI 详情卡片加载完成。"""
+        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        self.wait_xpath(self.title_xpath(poi_name), f"POI详情标题-{poi_name}", timeout=timeout)
+        self.wait_xpath(self.RATING_XPATH, "POI详情评分", timeout=timeout)
+
+    def wait_detail_present(self, poi_name: str, *, timeout: float = 10) -> None:
+        """等待 POI 详情仍处于打开状态，不要求评分等首屏字段当前可见。"""
+        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        self.wait_xpath(self.title_xpath(poi_name), f"POI详情标题-{poi_name}", timeout=timeout)
+
+    def wait_gallery_visible(self, *, timeout: float = 8):
+        """等待 POI 详情图集展示，兼容图集在不同容器下渲染的情况。"""
+        return self.wait_any_xpath(
+            self.GALLERY_XPATH_CANDIDATES,
+            "POI详情图集",
+            timeout=timeout,
+        )
+
+    def wait_detail_closed(self, *, timeout: float = 8) -> None:
+        """等待 POI 详情卡片关闭。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is None:
+                return
+            time.sleep(0.4)
+        raise RuntimeError(f"[{self.PAGE_NAME}] POI详情卡片未关闭，timeout={timeout}s")
+
+    @staticmethod
+    def _as_list(components):
+        if components is None:
+            return []
+        if isinstance(components, list):
+            return components
+        return [components]
+
+    @staticmethod
+    def _bounds_tuple(component) -> tuple[int, int, int, int]:
+        bounds = component.getBounds()
+        return (
+            int(bounds.left),
+            int(bounds.top),
+            int(bounds.right),
+            int(bounds.bottom),
+        )
+
+    def close_button(self, *, timeout: float = 8):
+        """定位 POI 详情右上角叉号。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            detail = self.find_xpath(self.POI_DETAIL_ROOT_XPATH)
+            images = self._as_list(
+                self.driver.find_all_components(BY.xpath('//Image[@clickable="true"]'))
+            )
+            if detail is not None:
+                detail_left, detail_top, detail_right, detail_bottom = self._bounds_tuple(detail)
+                detail_width = max(1, detail_right - detail_left)
+                candidates = []
+                for image in images:
+                    left, top, right, bottom = self._bounds_tuple(image)
+                    if right <= left or bottom <= top:
+                        continue
+                    if left < detail_right - detail_width * 0.18:
+                        continue
+                    if top < detail_top - 380 or bottom > detail_top + 160:
+                        continue
+                    candidates.append((top, -left, image))
+                if candidates:
+                    candidates.sort(key=lambda item: (item[0], item[1]))
+                    return candidates[0][2]
+            time.sleep(0.3)
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到POI详情右上角叉号，timeout={timeout}s")
+
+    def close_detail(self, *, timeout: float = 8) -> None:
+        """点击 POI 详情右上角叉号并等待返回上一层。"""
+        self.close_button(timeout=timeout).click()
+        self.wait_detail_closed(timeout=timeout)
+
     def tap_add_to_trip(self) -> None:
         """点击“添加到我的行程”。"""
         self.tap_xpath(self.ADD_TO_TRIP_XPATH, "添加到我的行程")
@@ -118,6 +211,11 @@ class PoiDetailPage(BasePage):
     def tap_favorite(self) -> None:
         """点击 POI 详情页左下角收藏按钮。"""
         self.tap_xpath(self.FAVORITE_BUTTON_XPATH, "POI 收藏按钮")
+
+    def tap_location_button(self, *, timeout: float = 8) -> None:
+        """点击 POI 详情页左下角定位按钮。"""
+        self.tap_xpath(self.LOCATION_BUTTON_XPATH, "POI 详情左下角定位按钮", timeout=timeout)
+        time.sleep(1.5)
 
     def tap_book_hotel(self) -> None:
         """点击 POI 详情页右下角“订酒店”。"""
@@ -127,6 +225,11 @@ class PoiDetailPage(BasePage):
     def tap_navigation(self) -> None:
         """点击 POI 详情页右下角“导航”。"""
         self.tap_xpath(self.NAVIGATION_BUTTON_XPATH, "导航按钮")
+        self._continue_task_limit_prompt_if_present()
+
+    def tap_review_service(self) -> None:
+        """点击 POI 详情页底部“看点评”。"""
+        self.tap_xpath(self.REVIEW_BUTTON_XPATH, "看点评按钮")
         self._continue_task_limit_prompt_if_present()
 
     def _continue_task_limit_prompt_if_present(self) -> None:
@@ -143,6 +246,36 @@ class PoiDetailPage(BasePage):
     def system_gesture_back(self) -> None:
         """从屏幕右边缘左滑，执行 HarmonyOS 系统返回手势。"""
         self.driver.swipe_to_back(side="RIGHT")
+
+    def swipe_detail_up(self, *, distance: int = 70) -> None:
+        """在 POI 详情卡片内向上滑动。"""
+        detail = self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片")
+        self.driver.swipe("UP", distance=distance, area=detail, swipe_time=0.6)
+        time.sleep(0.8)
+
+    def scroll_detail_until_xpath_visible(
+        self,
+        xpath: str,
+        name: str,
+        *,
+        max_swipes: int = 5,
+        timeout: float = 8,
+    ):
+        """在 POI 详情卡片中滚动，直到目标内容进入可见区域。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            component = self.find_xpath(xpath)
+            if component is not None:
+                return component
+            time.sleep(0.3)
+
+        for _ in range(max_swipes):
+            self.swipe_detail_up()
+            component = self.driver.wait_for_component(BY.xpath(xpath), timeout=1)
+            if component is not None:
+                return component
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] POI详情滚动后仍未找到{name}")
 
     @classmethod
     def recommendation_card_xpath(cls, index: int) -> str:
