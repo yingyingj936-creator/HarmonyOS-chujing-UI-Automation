@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 from hypium import BY
 
@@ -37,8 +38,14 @@ class LocalServicePage(BasePage):
     BBC_NEWS_ROW_XPATH = (
         '//SideBarContainer//*[@clickable="true" and .//Text[@text="BBC News"]]'
     )
-    FOOD_ORDERING_CARD_XPATH = (
+    FOOD_ORDERING_CARD_TEXT_XPATH = (
         '//SideBarContainer//Text[@text="掌上美食" or contains(@text, "掌上美食")]'
+    )
+    FOOD_ORDERING_CARD_XPATH = FOOD_ORDERING_CARD_TEXT_XPATH
+    FOOD_ORDERING_IMAGE_CARD_XPATHS = (
+        '//SideBarContainer//*[@clickable="true" and .//Image]',
+        '//SideBarContainer//ListItem[@clickable="true" and .//Image]',
+        '//SideBarContainer//Stack[@clickable="true" and .//Image]',
     )
 
     @classmethod
@@ -157,12 +164,104 @@ class LocalServicePage(BasePage):
         timeout: float = 8,
         max_swipes: int = 6,
     ) -> object:
-        """滚动右侧服务列表，直到掌上美食卡片进入可见区域。"""
-        return self.scroll_service_content_until_xpath_visible(
-            self.FOOD_ORDERING_CARD_XPATH,
-            "掌上美食卡片",
+        """滚动右侧服务列表，直到掌上美食卡片进入可见区域。
+
+        线上配置里“掌上美食”可能是图片卡片，UI 树没有文字节点。
+        因此这里先按文字找，失败后按右侧内容区的图片大卡片兜底。
+        """
+        deadline = time.time() + timeout
+        container = self.wait_xpath(
+            self.SERVICE_CONTAINER_XPATH,
+            "本地服务内容区",
             timeout=timeout,
-            max_swipes=max_swipes,
+        )
+        for swipe_count in range(max_swipes + 1):
+            component = self.find_food_ordering_card(container=container)
+            if component is not None:
+                return component
+            if swipe_count == max_swipes or time.time() >= deadline:
+                break
+            self.driver.swipe(
+                "UP",
+                distance=55,
+                area=container,
+                swipe_time=0.5,
+            )
+            time.sleep(0.6)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未找到掌上美食卡片，timeout={timeout}s"
+        )
+
+    def find_food_ordering_card(self, *, container: Any | None = None) -> Any | None:
+        """Find food ordering card by text first, then image-card fallback."""
+        text_component = self.find_xpath(self.FOOD_ORDERING_CARD_TEXT_XPATH)
+        if text_component is not None:
+            return text_component
+
+        if container is None:
+            container = self.find_xpath(self.SERVICE_CONTAINER_XPATH)
+        if container is None:
+            return None
+
+        candidates = []
+        for xpath in self.FOOD_ORDERING_IMAGE_CARD_XPATHS:
+            for component in self._find_all_xpath(xpath):
+                if not self._is_right_service_card(component, container):
+                    continue
+                left, top, right, bottom = self._component_bounds(component)
+                area = (right - left) * (bottom - top)
+                is_banner = self._is_food_ordering_banner(component)
+                candidates.append((not is_banner, top, left, -area, component))
+
+        if not candidates:
+            return None
+        return sorted(candidates, key=lambda item: item[:4])[0][4]
+
+    def _find_all_xpath(self, xpath: str) -> list[Any]:
+        components = self.driver.find_all_components(BY.xpath(xpath))
+        if components is None:
+            return []
+        if isinstance(components, list):
+            return components
+        return [components]
+
+    @staticmethod
+    def _component_bounds(component: Any) -> tuple[int, int, int, int]:
+        bounds = component.getBounds()
+        return (
+            int(bounds.left),
+            int(bounds.top),
+            int(bounds.right),
+            int(bounds.bottom),
+        )
+
+    def _is_right_service_card(self, component: Any, container: Any) -> bool:
+        left, top, right, bottom = self._component_bounds(component)
+        c_left, c_top, c_right, c_bottom = self._component_bounds(container)
+        width = right - left
+        height = bottom - top
+        if width < 180 or height < 80:
+            return False
+        if right <= c_left or left >= c_right or bottom <= c_top or top >= c_bottom:
+            return False
+
+        # Ignore the left category rail; food ordering is a large card in right content.
+        right_content_left = c_left + int((c_right - c_left) * 0.28)
+        return left >= right_content_left
+
+    def _is_food_ordering_banner(self, component: Any) -> bool:
+        left, top, right, bottom = self._component_bounds(component)
+        width = right - left
+        height = bottom - top
+        if width <= 0 or height <= 0:
+            return False
+        properties = component.getAllProperties().to_dict()
+        # The "掌上美食" entry is configured as a wide image banner, while
+        # third-party service rows such as foodpanda/Keeta are shorter rows.
+        return (
+            properties.get("type") == "__Common__"
+            or height / width >= 0.32
         )
 
     def scroll_service_content_until_xpath_visible(

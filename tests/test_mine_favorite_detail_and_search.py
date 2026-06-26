@@ -1,6 +1,7 @@
 import time
 
 import allure
+import pytest
 from hypium import BY
 
 from pages.bottom_navigation import BottomNavigation
@@ -36,6 +37,19 @@ def _return_to_mine_favorites(
     mine.scroll_favorites_area_into_view(max_swipes=6)
 
 
+def _wait_first_favorite_or_skip(
+    mine: MinePage,
+    item_type: str,
+) -> tuple[str, object]:
+    try:
+        return mine.wait_first_visible_favorite_item(item_type)
+    except RuntimeError as exc:
+        pytest.skip(
+            f"当前账号收藏{item_type}Tab没有可点击内容，"
+            f"请先收藏至少一个{item_type}后再单独运行该用例；原始信息：{exc}"
+        )
+
+
 @allure.feature("收藏管理")
 @allure.story("我的页收藏地点、收藏帖子和收藏搜索")
 def test_mine_favorite_place_post_and_search(driver) -> None:
@@ -49,6 +63,7 @@ def test_mine_favorite_place_post_and_search(driver) -> None:
         navigation.tap_mine()
         mine.wait_content_loaded(timeout=15)
         mine.scroll_favorites_area_into_view(max_swipes=6)
+        mine.clear_favorite_search()
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(mine.FAVORITES_TITLE_XPATH),
@@ -58,14 +73,15 @@ def test_mine_favorite_place_post_and_search(driver) -> None:
         )
 
     with allure.step("步骤1：点击收藏地点Tab下第一条POI，校验跳转POI详情"):
+        mine.clear_favorite_search()
         mine.tap_favorite_places_tab()
-        place_name, place_component = mine.wait_first_visible_favorite_item("地点")
+        place_name, place_component = _wait_first_favorite_or_skip(mine, "地点")
         attach_highlighted_bounds(
             driver,
             place_component.getBounds(),
             f"收藏地点POI-{place_name}",
         )
-        place_component.click()
+        mine.tap_favorite_item(place_name, place_component)
         poi_detail.wait_detail_present(place_name, timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -82,14 +98,15 @@ def test_mine_favorite_place_post_and_search(driver) -> None:
         _return_to_mine_favorites(driver, navigation, mine)
 
     with allure.step("步骤2：点击收藏帖子Tab下第一篇帖子，校验跳转帖子详情"):
+        mine.clear_favorite_search()
         mine.tap_favorite_posts_tab()
-        post_title, post_component = mine.wait_first_visible_favorite_item("帖子")
+        post_title, post_component = _wait_first_favorite_or_skip(mine, "帖子")
         attach_highlighted_bounds(
             driver,
             post_component.getBounds(),
             f"收藏帖子-{post_title}",
         )
-        post_component.click()
+        mine.tap_favorite_item(post_title, post_component)
         post_detail.wait_loaded(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
@@ -105,7 +122,9 @@ def test_mine_favorite_place_post_and_search(driver) -> None:
             time.sleep(1)
         _return_to_mine_favorites(driver, navigation, mine)
 
-    with allure.step("步骤3：点击收藏搜索框，输入“香港”并校验可搜索出对应内容"):
+    with allure.step("步骤3：在收藏帖子Tab下点击搜索框，输入“香港”并校验帖子搜索结果"):
+        mine.clear_favorite_search()
+        mine.tap_favorite_posts_tab()
         mine.input_favorite_search(SEARCH_KEYWORD)
         result_text, result_component = mine.wait_favorite_search_result(
             SEARCH_KEYWORD,

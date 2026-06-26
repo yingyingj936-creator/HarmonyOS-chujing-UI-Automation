@@ -3,13 +3,14 @@ import time
 from hypium import BY
 
 from pages.base_page import BasePage
+from pages.outbound_home import OutboundHomePage
 
 
 class OutboundSearchPage(BasePage):
     """出境服务搜索页面对象"""
 
     PAGE_NAME = "OutboundSearchPage"
-    HOME_SEARCH_BAR_XPATH = '//*[@text="搜索服务、地图、帖子"]'
+    HOME_SEARCH_BAR_XPATH = OutboundHomePage.SEARCH_BAR_XPATH
     SEARCH_INPUT_XPATH = '//TextInput'
     SEARCH_BUTTON_XPATH = '//Text[@text="搜索" and @clickable="true"]'
     BACK_BUTTON_XPATH = '//Row[./Text[@text="搜索"]]/Row[./Image]'

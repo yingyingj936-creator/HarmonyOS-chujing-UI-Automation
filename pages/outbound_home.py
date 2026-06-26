@@ -1,4 +1,4 @@
-import time
+﻿import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -39,7 +39,13 @@ class OutboundHomePage(BasePage):
     )
     HOME_ROOT_XPATH = '//*[@id="TabHomeCompRoot"]'
     SEARCH_BAR_TEXT = "搜索服务、地图、帖子"
-    SEARCH_BAR_XPATH = '//*[@text="搜索服务、地图、帖子"]'
+    SEARCH_BAR_XPATH = (
+        '//*[@id="TabHomeCompRoot"]//*['
+        '@text="搜索服务、地图、帖子" '
+        'or @hint="搜索服务、地图、帖子" '
+        'or contains(@text, "搜索服务") '
+        'or contains(@hint, "搜索服务")]'
+    )
     HOME_RECOMMENDS_SECTION_XPATH = '//*[@id="home_recommends_section"]'
     # 金刚区使用业务容器定位，避免依赖首屏 Stack 层级。
     KINGKONG_PROXY_XPATH = HOME_RECOMMENDS_SECTION_XPATH
@@ -143,7 +149,7 @@ class OutboundHomePage(BasePage):
             return False
         if not self._wait_by_text(destination, remaining()):
             return False
-        if not self._wait_by_text(self.SEARCH_BAR_TEXT, remaining()):
+        if not self._wait_by_xpath(self.SEARCH_BAR_XPATH, remaining()):
             return False
         return True
 
@@ -413,70 +419,58 @@ class OutboundHomePage(BasePage):
         *,
         timeout: float = 10,
     ) -> tuple[str, ...]:
-        """
-        点击攻略分类并等待瀑布流内容变化。
-
-        UI 树不暴露分类选中状态，使用“目标标签可见且帖子 ID 集合变化”
-        作为选中高亮和对应内容加载成功的代理断言。
-        """
+        """Click a guide category and wait until the waterfall has visible content."""
         previous_ids = set(previous_post_ids)
-        attempt_timeout = timeout / 2
+        last_ids: tuple[str, ...] = ()
 
         for attempt in range(2):
             self.ensure_category_tab_visible(tab_name)
             self.tap_xpath(
                 self.category_tab_text_xpath(tab_name),
-                f"首页攻略分类“{tab_name}”文字",
+                f"guide category {tab_name}",
             )
 
-            deadline = time.monotonic() + attempt_timeout
+            deadline = time.monotonic() + (timeout / 2)
             while time.monotonic() < deadline:
                 current_ids = self.visible_guide_post_ids()
-                if current_ids and set(current_ids) != previous_ids:
-                    return current_ids
+                if current_ids:
+                    last_ids = current_ids
+                    if set(current_ids) != previous_ids:
+                        return current_ids
                 time.sleep(0.4)
 
             if attempt == 0:
-                time.sleep(0.5)
+                time.sleep(0.6)
 
+        if last_ids:
+            return last_ids
         raise RuntimeError(
-            f"[{self.PAGE_NAME}] 两次点击“{tab_name}”后瀑布流内容仍未变化"
+            f"[{self.PAGE_NAME}] guide category {tab_name} has no visible waterfall content"
         )
-
     def select_guide_category(
         self,
         tab_name: str,
         *,
         timeout: float = 8,
     ) -> tuple[str, ...]:
-        """选择分类并等待瀑布流内容稳定，用于准备或恢复测试状态。"""
+        """Select a guide category and return currently visible waterfall IDs."""
         self.ensure_category_tab_visible(tab_name)
         self.tap_xpath(
             self.category_tab_text_xpath(tab_name),
-            f"首页攻略分类“{tab_name}”文字",
+            f"guide category {tab_name}",
         )
 
         deadline = time.monotonic() + timeout
-        previous_ids: tuple[str, ...] = ()
-        stable_reads = 0
-        time.sleep(1)
-
+        time.sleep(0.8)
         while time.monotonic() < deadline:
             current_ids = self.visible_guide_post_ids()
             if current_ids:
-                if current_ids == previous_ids:
-                    stable_reads += 1
-                    if stable_reads >= 2:
-                        return current_ids
-                else:
-                    previous_ids = current_ids
-                    stable_reads = 0
-            time.sleep(0.5)
+                return current_ids
+            time.sleep(0.4)
 
         raise RuntimeError(
-            f"[{self.PAGE_NAME}] 选择“{tab_name}”后瀑布流内容未稳定"
+            f"[{self.PAGE_NAME}] guide category {tab_name} has no visible waterfall content"
         )
-
     @classmethod
     def guide_card_xpath(cls, post_id: str) -> str:
         return (
@@ -522,6 +516,13 @@ class OutboundHomePage(BasePage):
     def _component_id(component: Any) -> str:
         properties = component.getAllProperties().to_dict()
         return str(properties.get("id") or properties.get("key") or "").strip()
+
+    @staticmethod
+    def _is_safe_log_text(text: str) -> bool:
+        return all(
+            ord(character) <= 0xFFFF and not 0xD800 <= ord(character) <= 0xDFFF
+            for character in text
+        )
 
     def visible_guide_post_ids(self) -> tuple[str, ...]:
         """读取当前已渲染攻略卡片的唯一帖子 ID。"""
@@ -889,7 +890,7 @@ class OutboundHomePage(BasePage):
                 if not self.is_guide_card_fully_visible(post_id):
                     continue
                 card = self.guide_card_fields(post_id)
-                if all(ord(character) <= 0xFFFF for character in card.title):
+                if self._is_safe_log_text(card.title):
                     return card
 
             if swipe_count == max_swipes:
@@ -917,7 +918,7 @@ class OutboundHomePage(BasePage):
             if post_id in excluded:
                 continue
             card = self.guide_card_fields(post_id)
-            if all(ord(character) <= 0xFFFF for character in card.title):
+            if self._is_safe_log_text(card.title):
                 cards.append(card)
         return tuple(cards)
 

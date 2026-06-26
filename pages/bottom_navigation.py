@@ -1,4 +1,5 @@
 from pages.base_page import BasePage
+from pages.outbound_home import OutboundHomePage
 
 
 class BottomNavigation(BasePage):
@@ -10,6 +11,7 @@ class BottomNavigation(BasePage):
     NEARBY_MARKER_TEXT = "探索附近"
     MINE_MARKER_TEXT = "小星星的旅程"
     HOME_MARKER_TEXT = "搜索服务、地图、帖子"
+    HOME_MARKER_XPATH = OutboundHomePage.SEARCH_BAR_XPATH
 
     _TAB_XPATH_TEMPLATE = (
         '//*[@id="HwAuthDialog_rootId"]//Column[./Text[@text="{tab_name}"]]'

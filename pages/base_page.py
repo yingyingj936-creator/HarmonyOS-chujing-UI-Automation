@@ -1,4 +1,4 @@
-import time
+﻿import time
 from typing import Any
 
 from hypium import BY
@@ -46,12 +46,32 @@ class BasePage:
         raise RuntimeError(f"[{self.PAGE_NAME}] 未找到{name}，timeout={timeout}s")
 
     def wait_text(self, text: str, name: str | None = None, *, timeout: float = 8) -> Any:
+        has_unsafe_log_text = any(
+            ord(character) > 0xFFFF or 0xD800 <= ord(character) <= 0xDFFF
+            for character in text
+        )
+        if has_unsafe_log_text:
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+                components = self.driver.find_all_components(BY.xpath("//Text"))
+                if components is None:
+                    time.sleep(0.3)
+                    continue
+                if not isinstance(components, list):
+                    components = [components]
+                for component in components:
+                    if component.getText().strip() == text:
+                        return component
+                time.sleep(0.3)
+            raise RuntimeError(
+                f"[{self.PAGE_NAME}] text not found: {name or 'target'}, timeout={timeout}s"
+            )
+
         return self.wait_component(
             BY.text(text),
-            name or f"文本“{text}”",
+            name or f"text {text}",
             timeout=timeout,
         )
-
     def tap_xpath(
         self,
         xpath: str,

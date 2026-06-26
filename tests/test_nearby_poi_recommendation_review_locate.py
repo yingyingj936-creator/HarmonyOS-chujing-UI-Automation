@@ -13,74 +13,30 @@ from utils.allure_visual import (
 )
 
 
-POI_NAME = "露台餐厅"
-ANCHOR_POI_NAME = "Bakehouse（尖沙咀店）"
-
-
-def _return_from_service_to_poi_detail(driver, poi_detail: PoiDetailPage) -> None:
+def _return_from_service_to_poi_detail(
+    driver,
+    poi_detail: PoiDetailPage,
+    poi_name: str,
+) -> None:
     """从关联元服务返回 POI 详情，优先系统返回，不成功再使用侧滑返回。"""
     driver.press_back()
     time.sleep(1.5)
-    if driver.wait_for_component(BY.xpath(poi_detail.title_xpath(POI_NAME)), timeout=4):
+    if driver.wait_for_component(BY.xpath(poi_detail.title_xpath(poi_name)), timeout=4):
         return
 
     poi_detail.system_gesture_back()
-    poi_detail.wait_detail_present(POI_NAME, timeout=8)
-
-
-def _ensure_target_poi_available(
-    driver,
-    nearby: NearbyPage,
-    poi_detail: PoiDetailPage,
-):
-    """确保附近列表中能看到目标 POI；默认列表没有时切到 Bakehouse 周边。"""
-    try:
-        return nearby.scroll_poi_into_view(POI_NAME, max_swipes=3)
-    except RuntimeError as exc:
-        allure.attach(
-            str(exc),
-            name="前置补充-当前附近列表未展示目标POI",
-            attachment_type=allure.attachment_type.TEXT,
-        )
-
-    with allure.step(f"前置补充：刷新到“{ANCHOR_POI_NAME}”周边，确保列表展示“{POI_NAME}”"):
-        nearby.open_search_layer(timeout=8)
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(nearby.recommended_poi_text_xpath(ANCHOR_POI_NAME)),
-            f"搜索弹层推荐地点-{ANCHOR_POI_NAME}",
-            timeout=8,
-            attach_crop=False,
-        )
-        nearby.tap_recommended_poi(ANCHOR_POI_NAME, timeout=8)
-        poi_detail.wait_detail_loaded(ANCHOR_POI_NAME, timeout=12)
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(poi_detail.title_xpath(ANCHOR_POI_NAME)),
-            f"POI详情标题-{ANCHOR_POI_NAME}",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(poi_detail.LOCATION_BUTTON_XPATH),
-            f"{ANCHOR_POI_NAME}-左下角定位按钮",
-            timeout=8,
-            attach_crop=False,
-        ).click()
-        poi_detail.wait_detail_closed(timeout=8)
-        nearby.wait_selected_poi_surrounding_loaded(ANCHOR_POI_NAME, timeout=12)
-        return nearby.scroll_poi_into_view(POI_NAME, max_swipes=8)
+    poi_detail.wait_detail_present(poi_name, timeout=8)
 
 
 @allure.feature("出境服务")
 @allure.story("附近页 POI 详情相关推荐、看点评和定位刷新")
 def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
-    """验证附近页露台餐厅可打开详情、进入推荐帖子和点评服务，并定位刷新周边。"""
+    """验证附近页列表第一位 POI 可打开详情、进入推荐帖子和点评服务，并定位刷新周边。"""
     navigation = BottomNavigation(driver)
     nearby = NearbyPage(driver)
     poi_detail = PoiDetailPage(driver)
     post_detail = PostDetailPage(driver)
+    poi_name = ""
 
     with allure.step("前置条件：普通用户进入中国香港附近页"):
         navigation.tap_nearby()
@@ -100,15 +56,15 @@ def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step(f"步骤1：点击附近列表的“{POI_NAME}”，校验 POI 详情名称、评分、图集和相关推荐"):
-        poi_item = _ensure_target_poi_available(driver, nearby, poi_detail)
-        attach_highlighted_bounds(driver, poi_item.getBounds(), f"附近列表POI-{POI_NAME}")
-        nearby.tap_poi_in_list(POI_NAME, max_swipes=1)
-        poi_detail.wait_detail_loaded(POI_NAME, timeout=12)
+    with allure.step("步骤1：点击附近列表第一位 POI，校验 POI 详情名称、评分、图集和相关推荐"):
+        poi_name, poi_item = nearby.first_visible_poi_text_component(timeout=10)
+        attach_highlighted_bounds(driver, poi_item.getBounds(), f"附近列表第一位POI-{poi_name}")
+        nearby.tap_poi_in_list(poi_name, max_swipes=1)
+        poi_detail.wait_detail_loaded(poi_name, timeout=12)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_detail.title_xpath(POI_NAME)),
-            f"POI详情标题-{POI_NAME}",
+            BY.xpath(poi_detail.title_xpath(poi_name)),
+            f"POI详情标题-{poi_name}",
             timeout=8,
             attach_crop=False,
         )
@@ -155,11 +111,11 @@ def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
             attach_crop=False,
         )
         post_detail.tap_back_button()
-        poi_detail.wait_detail_present(POI_NAME, timeout=10)
+        poi_detail.wait_detail_present(poi_name, timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_detail.title_xpath(POI_NAME)),
-            f"返回POI详情-{POI_NAME}",
+            BY.xpath(poi_detail.title_xpath(poi_name)),
+            f"返回POI详情-{poi_name}",
             timeout=8,
             attach_crop=False,
         )
@@ -181,12 +137,12 @@ def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step(f"步骤4：返回 POI 详情后点击左下角定位，校验刷新为“{POI_NAME}”周边数据"):
-        _return_from_service_to_poi_detail(driver, poi_detail)
+    with allure.step("步骤4：返回 POI 详情后点击左下角定位，校验刷新为该 POI 周边数据"):
+        _return_from_service_to_poi_detail(driver, poi_detail, poi_name)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_detail.title_xpath(POI_NAME)),
-            f"看点评返回POI详情-{POI_NAME}",
+            BY.xpath(poi_detail.title_xpath(poi_name)),
+            f"看点评返回POI详情-{poi_name}",
             timeout=8,
             attach_crop=False,
         )
@@ -200,25 +156,25 @@ def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
         location_button.click()
         poi_detail.wait_detail_closed(timeout=8)
         surrounding_names = nearby.wait_selected_poi_surrounding_loaded(
-            POI_NAME,
+            poi_name,
             timeout=12,
         )
         allure.attach(
             "\n".join(surrounding_names),
-            name=f"附近页-{POI_NAME}-周边POI列表",
+            name=f"附近页-{poi_name}-周边POI列表",
             attachment_type=allure.attachment_type.TEXT,
         )
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(nearby.selected_poi_label_xpath(POI_NAME)),
-            f"附近页地图选中地点-{POI_NAME}",
+            BY.xpath(nearby.selected_poi_label_xpath(poi_name)),
+            f"附近页地图选中地点-{poi_name}",
             timeout=8,
             attach_crop=False,
         )
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(nearby.POI_LIST_XPATH),
-            f"附近页-{POI_NAME}-周边POI列表",
+            f"附近页-{poi_name}-周边POI列表",
             timeout=8,
             attach_crop=False,
         )

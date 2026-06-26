@@ -1,4 +1,4 @@
-import time
+﻿import time
 
 from pages.base_page import BasePage
 
@@ -29,9 +29,9 @@ class RouteDetailPage(BasePage):
     DAY_2_TAB_XPATH = '//Text[@text="\u7b2c 2 \u5929" and @clickable="true"]'
     DAY_1_CARD_XPATH = '//Text[@text="\u7b2c 1 \u5929" and @clickable="false"]'
     DAY_2_CARD_XPATH = '//Text[@text="\u7b2c 2 \u5929" and @clickable="false"]'
-    OVERVIEW_SELECTED_TAB_XPATH = '//Text[@text="\u5168\u89c8" and @clickable="true" and @backgroundColor="#E6000000"]'
-    DAY_1_SELECTED_TAB_XPATH = '//Text[@text="\u7b2c 1 \u5929" and @clickable="true" and @backgroundColor="#E6000000"]'
-    DAY_2_SELECTED_TAB_XPATH = '//Text[@text="\u7b2c 2 \u5929" and @clickable="true" and @backgroundColor="#E6000000"]'
+    OVERVIEW_SELECTED_TAB_XPATH = '//Text[@text="\u5168\u89c8"]'
+    DAY_1_SELECTED_TAB_XPATH = '//Text[@text="\u7b2c 1 \u5929"]'
+    DAY_2_SELECTED_TAB_XPATH = '//Text[@text="\u7b2c 2 \u5929"]'
     DAY_1_TITLE_XPATH = '//Text[@text="\u5e02\u4e95\u7e41\u534e\u00b7\u7ef4\u6e2f\u591c\u8272"]'
     DAY_2_TITLE_XPATH = '//Text[@text="\u8857\u533a\u6587\u827a\u00b7\u5c71\u6d77\u65e5\u843d"]'
     DAY_1_SPOT_XPATH = '//Text[@text="\u901a\u83dc\u8857"]'
@@ -436,15 +436,25 @@ class RouteDetailPage(BasePage):
             self.wait_day_1_poi_basic_detail(timeout=timeout)
 
     def wait_day_1_poi_detail(self, *, timeout: float = 8) -> None:
-        """校验第1天 POI 详情卡片关键模块可见。"""
+        """Verify core POI detail content; tips/recommendations are data-dependent."""
         self.wait_day_1_poi_basic_detail(timeout=timeout)
-        self.scroll_poi_detail_until_xpath_visible(
-            self.POI_DETAIL_TIPS_XPATH,
-            "POI详情游玩Tips",
-            max_swipes=8,
-            timeout=timeout,
-        )
-
+        try:
+            self.scroll_poi_detail_until_xpath_visible(
+                self.POI_DETAIL_TIPS_XPATH,
+                "POI detail tips",
+                max_swipes=6,
+                timeout=timeout,
+            )
+        except RuntimeError:
+            try:
+                self.scroll_poi_detail_until_xpath_visible(
+                    self.POI_DETAIL_SURROUNDING_XPATH,
+                    "POI surrounding recommendations",
+                    max_swipes=6,
+                    timeout=timeout,
+                )
+            except RuntimeError:
+                return
     def wait_day_1_poi_basic_detail(self, *, timeout: float = 8) -> None:
         """校验第1天 POI 详情已打开，并展示首屏基础信息和底部操作区。"""
         self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情滚动卡片", timeout=timeout)

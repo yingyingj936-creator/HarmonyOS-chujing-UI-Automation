@@ -1,6 +1,7 @@
 import time
 
 from hypium import BY
+from hypium.model.basic_data_type import KeyCode
 
 from pages.base_page import BasePage
 
@@ -21,6 +22,9 @@ class MinePage(BasePage):
     FAVORITES_TITLE_XPATH = '//Text[@text="收藏"]'
     FAVORITE_SEARCH_XPATH = (
         '//TextInput[@hint="搜索收藏的地点、帖子"]'
+    )
+    FAVORITE_CLEAR_SEARCH_XPATH = (
+        '//TextInput[@hint="搜索收藏的地点、帖子"]/Stack[@clickable="true"]'
     )
     FAVORITE_PLACES_TAB_XPATH = (
         '//Row[./Text[contains(@text, "地点")]]'
@@ -478,7 +482,11 @@ class MinePage(BasePage):
             return False
         if normalized.startswith(("地点·", "帖子·", "评分 ", "搜索收藏")):
             return False
-        if normalized in {"暂无收藏", "暂无搜索结果"}:
+        if normalized in {
+            "暂无收藏",
+            "暂无搜索结果",
+            "没找到相关内容，换个搜索词试试?",
+        }:
             return False
         if normalized.replace(",", "").replace(".", "").isdigit():
             return False
@@ -504,14 +512,31 @@ class MinePage(BasePage):
         if not text_components:
             return []
 
-        visible_bounds = [
-            self._bounds_tuple(component)
-            for component in text_components
-            if self._is_visible(component)
-        ]
-        if not visible_bounds:
-            return []
-        bottom_limit = max(bounds[3] for bounds in visible_bounds) - 160
+        page_scroll = self.find_xpath(self.PAGE_SCROLL_XPATH)
+        if page_scroll is not None:
+            bottom_limit = self._bounds_tuple(page_scroll)[3] - 20
+        else:
+            visible_bounds = [
+                self._bounds_tuple(component)
+                for component in text_components
+                if self._is_visible(component)
+            ]
+            if not visible_bounds:
+                return []
+            bottom_limit = max(bounds[3] for bounds in visible_bounds)
+
+        nav_tops = []
+        for component in text_components:
+            text = component.getText().strip()
+            if text not in {"首页", "行程", "附近", "我的"}:
+                continue
+            if not self._is_visible(component):
+                continue
+            _, top, _, _ = self._bounds_tuple(component)
+            if top > search_bottom:
+                nav_tops.append(top)
+        if nav_tops:
+            bottom_limit = min(bottom_limit, min(nav_tops) - 20)
 
         candidates: list[tuple[int, int, str, object]] = []
         seen_texts: set[str] = set()
@@ -533,6 +558,51 @@ class MinePage(BasePage):
 
         candidates.sort(key=lambda item: (item[0], item[1]))
         return [(text, component) for _, _, text, component in candidates]
+
+    @classmethod
+    def favorite_item_container_xpaths(cls, item_name: str) -> tuple[str, ...]:
+        literal = cls._xpath_literal(item_name)
+        return (
+            f'//Column[@clickable="true" and .//Text[@text={literal}]]',
+            f'//Row[@clickable="true" and .//Text[@text={literal}]]',
+            f'//Stack[@clickable="true" and .//Text[@text={literal}]]',
+            f'//ListItem[@clickable="true" and .//Text[@text={literal}]]',
+        )
+
+    def tap_favorite_item(
+        self,
+        item_name: str,
+        fallback_component,
+    ) -> None:
+        """优先点击收藏内容所在的可点击卡片，避免直接点击 Text 不触发跳转。"""
+        text_left, text_top, text_right, text_bottom = self._bounds_tuple(
+            fallback_component
+        )
+        candidates = []
+        for xpath in self.favorite_item_container_xpaths(item_name):
+            try:
+                components = self.driver.find_all_components(BY.xpath(xpath))
+            except Exception:
+                components = []
+            for component in self._as_list(components):
+                if not self._is_visible(component):
+                    continue
+                left, top, right, bottom = self._bounds_tuple(component)
+                if (
+                    left <= text_left
+                    and top <= text_top
+                    and right >= text_right
+                    and bottom >= text_bottom
+                ):
+                    area = (right - left) * (bottom - top)
+                    candidates.append((area, top, left, component))
+
+        if candidates:
+            candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+            candidates[0][3].click()
+            return
+
+        fallback_component.click()
 
     def wait_first_visible_favorite_item(
         self,
@@ -578,11 +648,30 @@ class MinePage(BasePage):
 
     def input_favorite_search(self, keyword: str) -> None:
         """在收藏搜索框输入关键词，页面会刷新收藏搜索结果。"""
+        self.clear_favorite_search()
+        search_input = self.wait_xpath(
+            self.FAVORITE_SEARCH_XPATH,
+            "收藏搜索框",
+        )
+        search_input.click()
+        time.sleep(0.4)
+        search_input.inputText(keyword)
+        time.sleep(0.4)
+        self.driver.press_key(KeyCode.ENTER)
+        time.sleep(1)
+        if hasattr(search_input, "isFocused") and search_input.isFocused():
+            self.driver.press_back()
+            time.sleep(0.5)
+
+    def clear_favorite_search(self) -> None:
+        """清空收藏搜索框，避免上一次搜索词污染地点/帖子列表。"""
         self.scroll_favorites_area_into_view()
         search_input = self.wait_xpath(
             self.FAVORITE_SEARCH_XPATH,
             "收藏搜索框",
         )
+        if not search_input.getText().strip():
+            return
         search_input.click()
         time.sleep(0.4)
         if hasattr(search_input, "clearText"):
@@ -591,11 +680,25 @@ class MinePage(BasePage):
                 time.sleep(0.2)
             except Exception:
                 pass
-        search_input.inputText(keyword)
-        time.sleep(1)
+
+        if search_input.getText().strip():
+            clear_button = self.find_xpath(self.FAVORITE_CLEAR_SEARCH_XPATH)
+            if clear_button is not None:
+                clear_button.click()
+                time.sleep(0.5)
+
         if hasattr(search_input, "isFocused") and search_input.isFocused():
             self.driver.press_back()
             time.sleep(0.5)
+
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            current_input = self.find_xpath(self.FAVORITE_SEARCH_XPATH)
+            if current_input is not None and not current_input.getText().strip():
+                return
+            time.sleep(0.3)
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] 收藏搜索框未能清空")
 
     def scroll_favorite_place_into_view(
         self,

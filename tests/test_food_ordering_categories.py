@@ -5,7 +5,10 @@ from pages.food_ordering import FoodOrderingPage
 from pages.local_service import LocalServicePage
 from pages.outbound_home import OutboundHomePage
 from pages.service_detail import ServiceDetailPage
-from utils.allure_visual import assert_visible_and_attach_highlight
+from utils.allure_visual import (
+    assert_visible_and_attach_highlight,
+    attach_highlighted_bounds,
+)
 
 
 @allure.feature("本地服务")
@@ -29,13 +32,13 @@ def test_food_ordering_categories_and_lige(driver) -> None:
     with allure.step("步骤1：点击“美食”分类并查看掌上美食卡片"):
         local_service.tap_category("美食")
         local_service.wait_category_highlighted("美食", timeout=5)
-        local_service.ensure_food_ordering_card_visible(timeout=8)
-        assert_visible_and_attach_highlight(
+        food_ordering_card = local_service.ensure_food_ordering_card_visible(
+            timeout=8
+        )
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(local_service.FOOD_ORDERING_CARD_XPATH),
+            food_ordering_card.getBounds(),
             "美食分类-掌上美食卡片",
-            timeout=8,
-            attach_crop=False,
         )
 
     with allure.step("步骤2：点击掌上美食卡片，进入点餐列表"):

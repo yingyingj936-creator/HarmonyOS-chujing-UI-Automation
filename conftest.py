@@ -139,13 +139,50 @@ def _list_usb_targets() -> list[str]:
     )
     targets = []
     for line in result.stdout.splitlines():
-        target = line.strip()
-        if not target or target == "[Empty]":
+        raw_target = line.strip()
+        if not raw_target or raw_target == "[Empty]":
             continue
+        columns = raw_target.split()
+        target = columns[0]
         # 无线目标使用 ip:port；USB 目标为设备序列号。
-        if ":" not in target:
+        is_offline = any(column.lower() == "offline" for column in columns[1:])
+        if ":" not in target and not is_offline:
             targets.append(target)
     return targets
+
+
+def _assert_device_ready(settings: AppSettings) -> None:
+    """在创建 UiDriver 前快速确认 hdc 和 uitest 可用，避免 Hypium 内部报空指针。"""
+    try:
+        result = subprocess.run(
+            [
+                _hdc_executable(),
+                "-t",
+                settings.target_device,
+                "shell",
+                "uitest",
+                "--version",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"设备 {settings.target_device} 的 hdc shell 无响应。"
+            "请重新插拔 USB、确认设备未锁屏且 `hdc list targets` 显示 Connected 后重试。"
+        ) from exc
+
+    output = f"{result.stdout}\n{result.stderr}".strip()
+    if result.returncode != 0 or not output or "[Fail]" in output:
+        raise RuntimeError(
+            f"设备 {settings.target_device} 当前不可用，无法获取 uitest 版本。\n"
+            f"请确认 USB 连接稳定、设备在线且 `hdc -t {settings.target_device} shell uitest --version` 有输出。\n"
+            f"实际输出：{output or '<空>'}"
+        )
 
 
 def _resolve_usb_target(configured_target: str) -> str:
@@ -213,15 +250,23 @@ def _start_outbound_service(settings: AppSettings) -> None:
     time.sleep(settings.startup_wait_seconds)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def driver(app_settings: AppSettings):
     """全局 driver：连接设备并在会话结束后释放资源。"""
-    ui_driver = UiDriver.connect(device_sn=app_settings.target_device)
+    try:
+        _assert_device_ready(app_settings)
+        ui_driver = UiDriver.connect(device_sn=app_settings.target_device)
+    except Exception as exc:
+        pytest.fail(f"设备连接失败，终止当前用例：{exc}", pytrace=False)
+
     _start_outbound_service(app_settings)
     try:
         yield ui_driver
     finally:
-        ui_driver.close()
+        try:
+            ui_driver.close()
+        except Exception as exc:
+            print(f"[Device] 关闭 UiDriver 失败，可能是设备已断连：{exc}")
 
 
 def _return_to_home(driver, settings: AppSettings) -> bool:
@@ -248,11 +293,14 @@ def _return_to_home(driver, settings: AppSettings) -> bool:
                     is not None
                 ):
                     return True
-            except RuntimeError:
+            except Exception:
                 pass
 
-        driver.press_back()
-        time.sleep(settings.cleanup_back_interval_seconds)
+        try:
+            driver.press_back()
+            time.sleep(settings.cleanup_back_interval_seconds)
+        except Exception:
+            return False
 
     return home.is_at_home()
 
@@ -281,7 +329,7 @@ def _restore_default_destination(driver, settings: AppSettings) -> bool:
     try:
         home.tap_region_selector()
         destination_page.choose_destination(settings.default_destination)
-    except (AssertionError, RuntimeError):
+    except Exception:
         return False
 
     return driver.wait_for_component(destination_selector, timeout=8) is not None
@@ -311,7 +359,7 @@ def _restore_home_top(driver) -> bool:
             return False
         home.restore_top(max_swipes=18)
         return True
-    except RuntimeError:
+    except Exception:
         return False
 
 

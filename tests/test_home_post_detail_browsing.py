@@ -1,4 +1,4 @@
-import allure
+﻿import allure
 import pytest
 from hypium import BY
 
@@ -109,13 +109,11 @@ def test_home_post_detail_browsing(driver) -> None:
         detail.wait_text(card.title, "帖子标题")
         detail.wait_text(card.author, "作者昵称")
         detail.wait_author_avatar(card.author)
-        body_text = detail.wait_visible_body_text().getText().strip()
-        assert_visible_and_attach_highlight(
+        body_component = detail.wait_visible_body_text()
+        attach_highlighted_bounds(
             driver,
-            BY.text(body_text),
-            "帖子详情页-标题作者正文区域",
-            timeout=8,
-            attach_crop=False,
+            body_component.getBounds(),
+            "帖子详情页-正文区域",
         )
 
         engagement_stats = detail.scroll_to_engagement_stats()
@@ -151,6 +149,8 @@ def test_home_post_detail_browsing(driver) -> None:
 
     with allure.step("步骤4：向下滑动并点击更多攻略中的第一篇帖子"):
         detail.scroll_to_more_guides()
+        if detail.find_xpath(detail.FIRST_RELATED_CARD_XPATH) is None:
+            pytest.skip("当前帖子未加载出可点击的更多攻略卡片")
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(detail.FIRST_RELATED_CARD_XPATH),

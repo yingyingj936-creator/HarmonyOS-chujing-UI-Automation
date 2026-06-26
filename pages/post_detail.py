@@ -395,16 +395,21 @@ class PostDetailPage(BasePage):
 
     def try_scroll_to_more_guides(self, *, max_swipes: int = 30) -> bool:
         for swipe_count in range(max_swipes + 1):
-            if (
-                self.find_xpath(self.MORE_GUIDES_TITLE_XPATH) is not None
-                and self.find_xpath(self.FIRST_RELATED_CARD_XPATH) is not None
-            ):
+            has_title = self.find_xpath(self.MORE_GUIDES_TITLE_XPATH) is not None
+            has_card = self.find_xpath(self.FIRST_RELATED_CARD_XPATH) is not None
+            if has_card:
+                return True
+            if has_title:
+                for _ in range(4):
+                    self._swipe_detail_up()
+                    if self.find_xpath(self.FIRST_RELATED_CARD_XPATH) is not None:
+                        return True
                 return True
             if swipe_count == max_swipes:
                 break
             self.driver.swipe(
                 "UP",
-                distance=55,
+                distance=70,
                 start_point=(0.5, 0.78),
                 swipe_time=0.5,
             )

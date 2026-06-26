@@ -45,7 +45,7 @@ def test_switch_bottom_navigation_tabs(driver) -> None:
         navigation.tap_home()
         assert_visible_and_attach_highlight(
             driver,
-            BY.text(navigation.HOME_MARKER_TEXT),
+            BY.xpath(navigation.HOME_MARKER_XPATH),
             "首页-搜索服务、地图、帖子",
             timeout=8,
             attach_crop=False,

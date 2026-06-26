@@ -371,6 +371,43 @@ class NearbyPage(BasePage):
         candidates.sort(key=lambda item: (item[0], item[1]))
         return candidates[0][2]
 
+    def first_visible_poi_text_component(
+        self,
+        *,
+        timeout: float = 8,
+    ) -> tuple[str, Any]:
+        """返回附近 POI 列表当前第一位可见 POI 的名称和文本节点。"""
+        deadline = time.time() + timeout
+        last_names: tuple[str, ...] = ()
+        while time.time() < deadline:
+            components = self.driver.find_all_components(BY.xpath(self.POI_LIST_TEXT_XPATH))
+            candidates: list[tuple[int, int, str, Any]] = []
+            bottom_limit = self._bottom_navigation_top() - 8
+            for component in self._as_list(components):
+                if not self._is_visible(component):
+                    continue
+                text = component.getText().strip()
+                if not self._is_poi_name(text):
+                    continue
+                bounds = component.getBounds()
+                center_y = (int(bounds.top) + int(bounds.bottom)) // 2
+                if center_y >= bottom_limit:
+                    continue
+                candidates.append((int(bounds.top), int(bounds.left), text, component))
+
+            if candidates:
+                candidates.sort(key=lambda item: (item[0], item[1]))
+                _, _, name, component = candidates[0]
+                return name, component
+
+            last_names = self.visible_poi_names()
+            time.sleep(0.4)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未读取到附近 POI 列表第一位地点，"
+            f"最后可见POI：{last_names}"
+        )
+
     def scroll_poi_into_view(
         self,
         poi_name: str,
