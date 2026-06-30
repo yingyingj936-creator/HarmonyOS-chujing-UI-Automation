@@ -42,7 +42,7 @@ def test_food_ordering_categories_and_lige(driver) -> None:
         )
 
     with allure.step("步骤2：点击掌上美食卡片，进入点餐列表"):
-        local_service.tap_food_ordering_card()
+        local_service.tap_food_ordering_card(food_ordering_card)
         ordering_page.wait_xpath(
             ordering_page.PAGE_TITLE_XPATH,
             "点餐页标题",

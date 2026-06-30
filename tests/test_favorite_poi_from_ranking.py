@@ -6,7 +6,10 @@ from pages.mine_page import MinePage
 from pages.outbound_home import OutboundHomePage
 from pages.outbound_search import OutboundSearchPage
 from pages.poi_detail import PoiDetailPage
-from utils.allure_visual import assert_visible_and_attach_highlight
+from utils.allure_visual import (
+    assert_visible_and_attach_highlight,
+    attach_highlighted_bounds,
+)
 
 
 POI_NAME = "华嫂冰室"
@@ -94,3 +97,26 @@ def test_favorite_poi_from_ranking(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+
+    with allure.step("用例清理：取消本次新增收藏并恢复收藏地点默认页"):
+        place_component = mine_page.wait_xpath(
+            mine_page.favorite_place_xpath(POI_NAME),
+            f"待取消收藏地点-{POI_NAME}",
+            timeout=8,
+        )
+        attach_highlighted_bounds(
+            driver,
+            place_component.getBounds(),
+            f"清理收藏地点-{POI_NAME}",
+        )
+        mine_page.tap_favorite_item(POI_NAME, place_component)
+        poi_page.wait_detail_present(POI_NAME, timeout=10)
+        if poi_page.is_favorite_highlighted():
+            poi_page.tap_favorite()
+            assert poi_page.wait_favorite_highlighted(False), "清理时取消地点收藏失败"
+        try:
+            poi_page.close_detail(timeout=6)
+        except RuntimeError:
+            poi_page.press_system_back()
+        mine_page.wait_content_loaded(timeout=10)
+        mine_page.restore_favorites_default_state()

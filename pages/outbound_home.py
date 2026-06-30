@@ -650,13 +650,18 @@ class OutboundHomePage(BasePage):
         return int(card.getBounds().bottom) <= int(navigation.getBounds().top)
 
     @staticmethod
-    def _is_component_center_visible(component, *, bottom_limit: int) -> bool:
+    def _is_component_center_visible(
+        component,
+        *,
+        bottom_limit: int,
+        top_limit: int = 0,
+    ) -> bool:
         bounds = component.getBounds()
         center_y = (int(bounds.top) + int(bounds.bottom)) // 2
         return (
             int(bounds.right) > int(bounds.left)
             and int(bounds.bottom) > int(bounds.top)
-            and 0 <= center_y <= bottom_limit
+            and top_limit <= center_y <= bottom_limit
         )
 
     def guide_card_fields(self, post_id: str) -> HomeGuideCard:
@@ -794,21 +799,38 @@ class OutboundHomePage(BasePage):
         )
 
     def tap_guide_card(self, post_id: str) -> None:
+        """点击攻略封面或标题中心，避免卡片内点赞按钮截获点击。"""
         navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
         bottom_limit = (
             int(navigation.getBounds().top)
             if navigation is not None
             else 10_000
         )
+        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
+        top_limit = (
+            int(categories.getBounds().bottom) + 8
+            if categories is not None
+            else 0
+        )
         for xpath in (self.guide_cover_xpath(post_id), self.guide_title_xpath(post_id)):
             component = self.find_xpath(xpath)
             if component is not None and self._is_component_center_visible(
                 component,
                 bottom_limit=bottom_limit,
+                top_limit=top_limit,
             ):
-                component.click()
+                bounds = component.getBounds()
+                self.driver.click(
+                    (
+                        (int(bounds.left) + int(bounds.right)) // 2,
+                        (int(bounds.top) + int(bounds.bottom)) // 2,
+                    )
+                )
+                time.sleep(0.8)
                 return
-        self.tap_xpath(self.guide_card_xpath(post_id), "攻略卡片")
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 攻略 {post_id} 的封面和标题均不在安全点击区域"
+        )
 
     def wait_guide_like_count(
         self,
@@ -955,7 +977,9 @@ class OutboundHomePage(BasePage):
 
         for swipe_count in range(max_swipes + 1):
             for post_id in self.visible_guide_post_ids():
-                if not self.is_guide_card_safely_clickable(post_id):
+                # 点赞后还要点击同一张卡片进入详情，必须选择封面和信息区都完整
+                # 位于吸顶分类栏与底部导航之间的卡片，不能只保证爱心可点。
+                if not self.is_guide_card_fully_visible(post_id):
                     continue
                 if not self.is_guide_like_control_visible(post_id):
                     continue

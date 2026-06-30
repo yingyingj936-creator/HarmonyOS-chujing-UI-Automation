@@ -538,6 +538,18 @@ class TripDetailPage(BasePage):
         self.wait_poi_detail_closed(timeout=timeout)
         self.wait_loaded(trip_name, timeout=timeout)
 
+    def gesture_back_from_poi_detail(
+        self,
+        trip_name: str,
+        *,
+        timeout: float = 8,
+    ) -> None:
+        """通过系统侧滑关闭 POI 详情并返回行程详情页。"""
+        self.driver.swipe_to_back(side="RIGHT")
+        time.sleep(0.8)
+        self.wait_poi_detail_closed(timeout=timeout)
+        self.wait_loaded(trip_name, timeout=timeout)
+
     def wait_poi_detail_closed(self, *, timeout: float = 5) -> None:
         """等待 POI 详情卡片消失。"""
         self.driver.wait_for_component_disappear(

@@ -133,18 +133,12 @@ def test_trip_detail_poi_light_and_close(driver) -> None:
             "POI详情左下角点亮按钮-点击后",
         )
 
-    with allure.step("步骤4：点击叉号退出 POI 详情，回到行程详情页"):
-        close_button = trip_detail.poi_detail_close_button(timeout=8)
-        attach_highlighted_bounds(
-            driver,
-            close_button.getBounds(),
-            "POI详情右上角叉号",
-        )
-        trip_detail.close_poi_detail(TRIP_NAME, timeout=8)
+    with allure.step("步骤4：系统侧滑退出 POI 详情，回到行程详情页"):
+        trip_detail.gesture_back_from_poi_detail(TRIP_NAME, timeout=8)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_detail.route_trip_title_xpath(TRIP_NAME)),
-            f"返回后的行程详情页标题-{TRIP_NAME}",
+            f"侧滑返回后的行程详情页标题-{TRIP_NAME}",
             timeout=8,
             attach_crop=False,
         )

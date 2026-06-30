@@ -153,9 +153,10 @@ class LocalServicePage(BasePage):
             f"本地服务“{service_name}”",
         )
 
-    def tap_food_ordering_card(self) -> None:
-        """点击“美食”分类中的掌上美食卡片。"""
-        component = self.ensure_food_ordering_card_visible()
+    def tap_food_ordering_card(self, component: Any | None = None) -> None:
+        """点击已定位的掌上美食卡片，未传入时再执行一次查找。"""
+        if component is None:
+            component = self.ensure_food_ordering_card_visible()
         component.click()
 
     def ensure_food_ordering_card_visible(
@@ -210,13 +211,14 @@ class LocalServicePage(BasePage):
                 if not self._is_right_service_card(component, container):
                     continue
                 left, top, right, bottom = self._component_bounds(component)
+                height = bottom - top
                 area = (right - left) * (bottom - top)
-                is_banner = self._is_food_ordering_banner(component)
-                candidates.append((not is_banner, top, left, -area, component))
+                is_banner = self._is_food_ordering_banner(component, container)
+                candidates.append((not is_banner, -height, top, left, -area, component))
 
         if not candidates:
             return None
-        return sorted(candidates, key=lambda item: item[:4])[0][4]
+        return sorted(candidates, key=lambda item: item[:5])[0][5]
 
     def _find_all_xpath(self, xpath: str) -> list[Any]:
         components = self.driver.find_all_components(BY.xpath(xpath))
@@ -241,27 +243,31 @@ class LocalServicePage(BasePage):
         c_left, c_top, c_right, c_bottom = self._component_bounds(container)
         width = right - left
         height = bottom - top
-        if width < 180 or height < 80:
+        container_width = max(1, c_right - c_left)
+        container_height = max(1, c_bottom - c_top)
+        if width / container_width < 0.35 or height / container_height < 0.035:
             return False
         if right <= c_left or left >= c_right or bottom <= c_top or top >= c_bottom:
             return False
 
         # Ignore the left category rail; food ordering is a large card in right content.
-        right_content_left = c_left + int((c_right - c_left) * 0.28)
+        right_content_left = c_left + int(container_width * 0.24)
         return left >= right_content_left
 
-    def _is_food_ordering_banner(self, component: Any) -> bool:
+    def _is_food_ordering_banner(self, component: Any, container: Any) -> bool:
+        """按相对尺寸识别右侧横幅，避免固定像素阈值受分辨率影响。"""
         left, top, right, bottom = self._component_bounds(component)
+        c_left, _, c_right, _ = self._component_bounds(container)
         width = right - left
         height = bottom - top
         if width <= 0 or height <= 0:
             return False
-        properties = component.getAllProperties().to_dict()
-        # The "掌上美食" entry is configured as a wide image banner, while
-        # third-party service rows such as foodpanda/Keeta are shorter rows.
+        right_content_width = max(1, c_right - (c_left + int((c_right - c_left) * 0.24)))
+        aspect_ratio = height / width
+        # 掌上美食是接近铺满右侧内容区的横幅；普通服务行更矮。
         return (
-            properties.get("type") == "__Common__"
-            or height / width >= 0.32
+            width / right_content_width >= 0.72
+            and 0.30 <= aspect_ratio <= 0.65
         )
 
     def scroll_service_content_until_xpath_visible(

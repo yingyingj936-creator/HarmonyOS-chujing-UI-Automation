@@ -700,6 +700,15 @@ class MinePage(BasePage):
 
         raise RuntimeError(f"[{self.PAGE_NAME}] 收藏搜索框未能清空")
 
+    def restore_favorites_default_state(self) -> None:
+        """恢复收藏默认地点页并回到“我的”页顶部，避免污染后续用例。"""
+        self.wait_content_loaded(timeout=12)
+        self.scroll_favorites_area_into_view(max_swipes=8)
+        self.clear_favorite_search()
+        self.tap_favorite_places_tab()
+        time.sleep(0.5)
+        self.ensure_entry_area_visible(max_swipes=10)
+
     def scroll_favorite_place_into_view(
         self,
         place_name: str,

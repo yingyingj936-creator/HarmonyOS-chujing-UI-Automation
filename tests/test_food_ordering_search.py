@@ -39,7 +39,7 @@ def test_food_ordering_search_and_clear(driver) -> None:
             food_ordering_card.getBounds(),
             "前置准备-掌上美食卡片",
         )
-        food_ordering_card.click()
+        local_service.tap_food_ordering_card(food_ordering_card)
         ordering_page.wait_xpath(
             ordering_page.PAGE_TITLE_XPATH,
             "点餐页标题",

@@ -135,3 +135,6 @@ def test_mine_favorite_place_post_and_search(driver) -> None:
             result_component.getBounds(),
             f"收藏搜索结果-{result_text}",
         )
+
+    with allure.step("用例清理：清空收藏搜索并恢复收藏地点默认页"):
+        mine.restore_favorites_default_state()

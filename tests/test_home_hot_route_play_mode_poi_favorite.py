@@ -135,3 +135,6 @@ def test_play_mode_poi_favorite_syncs_with_mine_collection(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+
+    with allure.step("用例清理：恢复收藏地点默认页和我的页顶部"):
+        mine.restore_favorites_default_state()

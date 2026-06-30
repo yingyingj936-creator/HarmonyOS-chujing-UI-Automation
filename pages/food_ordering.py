@@ -18,10 +18,6 @@ class FoodOrderingPage(BasePage):
         '//Stack/Stack/List/ListItem/Row'
         '[@clickable="true" and ./Column/Text[@text="{service_name}"]]'
     )
-    DEFAULT_FIRST_ROW_XPATH = (
-        '//Tabs//Row[@clickable="true" '
-        'and ./Column/Text[@text="蜀小魚 (深水埗)"]]'
-    )
     ORDER_CONTENT_XPATH = '//Tabs'
     ORDER_ROW_XPATH = (
         '//Tabs//ListItem//Row[@clickable="true" and ./Column/Text]'
@@ -245,11 +241,10 @@ class FoodOrderingPage(BasePage):
         deadline = time.time() + timeout
         while time.time() < deadline:
             search_input = self.find_xpath(self.SEARCH_INPUT_XPATH)
-            default_row = self.find_xpath(self.DEFAULT_FIRST_ROW_XPATH)
             if (
                 search_input is not None
                 and not search_input.getText().strip()
-                and default_row is not None
+                and self.visible_order_names()
             ):
                 return
             time.sleep(0.4)

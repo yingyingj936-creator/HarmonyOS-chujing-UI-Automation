@@ -46,7 +46,16 @@ def test_home_guide_like_persists_after_restart(
 
         with allure.step("步骤2：进入帖子详情，校验右下角点赞状态和数量同步"):
             home.tap_guide_card(target_post_id)
-            detail.wait_loaded()
+            try:
+                detail.wait_loaded(timeout=6)
+            except RuntimeError:
+                if not home.is_at_home():
+                    raise
+                assert home.is_guide_liked(target_post_id), (
+                    "首次点击攻略后仍在首页，但点赞状态已被取消，疑似误点爱心"
+                )
+                home.tap_guide_card(target_post_id)
+                detail.wait_loaded(timeout=10)
             detail.scroll_to_like_stats()
             assert detail.wait_like_count(liked_count) == liked_count
             assert detail.is_liked(), "帖子详情页右下角爱心不是已点赞态"
@@ -87,15 +96,16 @@ def test_home_guide_like_persists_after_restart(
             and target_post_id is not None
             and original_count is not None
         ):
-            try:
-                if not home.is_at_home():
-                    restart_outbound_service()
-                home.find_guide_in_feed(target_post_id)
-                if home.is_guide_liked(target_post_id):
-                    home.tap_guide_like(target_post_id)
-                    home.wait_guide_like_count(target_post_id, original_count)
-            except Exception as exc:
-                cleanup_errors.append(f"取消点赞失败：{exc}")
+            with allure.step("用例清理：恢复目标帖子为未点赞状态"):
+                try:
+                    if not home.is_at_home():
+                        restart_outbound_service()
+                    home.find_guide_in_feed(target_post_id)
+                    if home.is_guide_liked(target_post_id):
+                        home.tap_guide_like(target_post_id)
+                        home.wait_guide_like_count(target_post_id, original_count)
+                except Exception as exc:
+                    cleanup_errors.append(f"取消点赞失败：{exc}")
 
         try:
             if home.is_at_home():

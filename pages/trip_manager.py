@@ -57,6 +57,30 @@ class TripManagerPage(BasePage):
             return components
         return [components]
 
+    def _visible_xpath(self, xpath: str):
+        """返回有有效可见区域的组件，过滤列表保留的离屏节点。"""
+        component = self.find_xpath(xpath)
+        if component is None:
+            return None
+        left, top, right, bottom = self._bounds_tuple(component)
+        if right <= left or bottom <= top or bottom <= 0:
+            return None
+        return component
+
+    def _visible_trip_card(self, xpath: str):
+        """返回未被底部导航遮挡的完整行程卡片。"""
+        component = self._visible_xpath(xpath)
+        if component is None:
+            return None
+        navigation = self.find_xpath(self.SCREEN_ROOT_XPATH)
+        if navigation is None:
+            return component
+        _, _, _, card_bottom = self._bounds_tuple(component)
+        _, navigation_top, _, _ = self._bounds_tuple(navigation)
+        if card_bottom > navigation_top - 10:
+            return None
+        return component
+
     @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
         names = []
@@ -75,7 +99,8 @@ class TripManagerPage(BasePage):
 
     @classmethod
     def trip_card_xpath(cls, trip_name: str) -> str:
-        return f'//Text[{cls._display_name_xpath_condition(trip_name)}]'
+        """返回“我的行程”列表中包含摘要字段的可点击卡片。"""
+        return cls.trip_card_with_summary_xpath(trip_name)
 
     @classmethod
     def trip_list_title_xpath(cls, trip_name: str) -> str:
@@ -101,9 +126,22 @@ class TripManagerPage(BasePage):
             'and .//Text[contains(@text, "天") and contains(@text, "地点")]]'
         )
 
-    def tap_trip(self, trip_name: str) -> None:
+    def tap_trip(self, trip_name: str, *, timeout: float = 8) -> None:
         """点击我的行程列表中的指定行程。"""
-        self.tap_xpath(self.trip_card_xpath(trip_name), f"行程“{trip_name}”")
+        target_xpath = self.trip_card_with_summary_xpath(trip_name)
+        trip_card = self._visible_trip_card(target_xpath)
+        if trip_card is None:
+            trip_card = self.scroll_trip_into_view(
+                trip_name,
+                max_swipes=max(8, int(timeout)),
+            )
+        bounds = trip_card.getBounds()
+        self.driver.click(
+            (
+                (int(bounds.left) + int(bounds.right)) // 2,
+                (int(bounds.top) + int(bounds.bottom)) // 2,
+            )
+        )
 
     def tap_hot_route_reference(self, *, timeout: float = 8) -> None:
         """点击“参考热门路线修改”入口。"""
@@ -186,7 +224,7 @@ class TripManagerPage(BasePage):
         self,
         *,
         max_swipes: int = 8,
-    ):
+    ) -> object:
         """返回可见的字段完整行程卡片。"""
         self.scroll_to_my_trips_area(max_swipes=max_swipes)
         trip_list = self.wait_xpath(
@@ -431,28 +469,51 @@ class TripManagerPage(BasePage):
         trip_name: str,
         *,
         max_swipes: int = 8,
-    ) -> None:
-        """滚动我的行程列表，直到指定行程进入可视区域。"""
-        self.scroll_to_my_trips_area(max_swipes=max_swipes)
+    ):
+        """从行程列表顶部向下查找指定行程，兼容列表位置被前序用例保留。"""
         trip_list = self.wait_xpath(
             self.TRIP_LIST_XPATH,
             "行程页滚动列表",
         )
         target_xpath = self.trip_card_with_summary_xpath(trip_name)
-        for swipe_count in range(max_swipes + 1):
-            if self.find_xpath(target_xpath) is not None:
-                return
-            if swipe_count == max_swipes:
+
+        visible_target = self._visible_trip_card(target_xpath)
+        if visible_target is not None:
+            return visible_target
+
+        # 行程页会保留上次滚动位置。先回到页面顶部，再从“我的行程”区域向下扫描，
+        # 避免从列表底部继续上拉而漏掉被新增行程挤到中间的目标卡片。
+        for _ in range(max(max_swipes, 12)):
+            if (
+                self._visible_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
+                or self._visible_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
+            ):
+                break
+            self.driver.swipe(
+                "DOWN",
+                distance=70,
+                area=trip_list,
+            )
+            time.sleep(0.35)
+
+        self.scroll_to_my_trips_area(max_swipes=max(max_swipes, 10))
+        scan_swipes = max(max_swipes, 24)
+        for swipe_count in range(scan_swipes + 1):
+            visible_target = self._visible_trip_card(target_xpath)
+            if visible_target is not None:
+                return visible_target
+            if swipe_count == scan_swipes:
                 break
             self.driver.swipe(
                 "UP",
-                distance=35,
+                distance=50,
                 area=trip_list,
             )
-            time.sleep(0.5)
+            time.sleep(0.4)
 
         raise RuntimeError(
-            f"[{self.PAGE_NAME}] 我的行程列表未找到“{trip_name}”"
+            f"[{self.PAGE_NAME}] 从列表顶部向下扫描 {scan_swipes} 次后"
+            f"仍未找到“{trip_name}”"
         )
 
     def pull_to_refresh(self) -> None:

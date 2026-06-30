@@ -110,11 +110,22 @@ def test_post_favorite_appears_in_mine_collection(driver) -> None:
 
     with allure.step("步骤3：在我的收藏帖子标签查找该帖子"):
         mine.scroll_favorite_post_into_view(card.title, max_swipes=10)
-        assert_visible_and_attach_highlight(
+        post_component = assert_visible_and_attach_highlight(
             driver,
             BY.xpath(mine.favorite_post_xpath(card.title)),
             f"我的收藏帖子-{card.title}",
             timeout=8,
             attach_crop=False,
         )
+
+    with allure.step("用例清理：取消本次新增收藏并恢复收藏地点默认页"):
+        mine.tap_favorite_item(card.title, post_component)
+        detail.wait_loaded(timeout=10)
+        detail.scroll_to_like_stats(max_swipes=24)
+        if detail.favorite_count() != original_count:
+            detail.tap_favorite()
+            assert detail.wait_favorite_count(original_count) == original_count
+        detail.tap_back_button()
+        mine.wait_content_loaded(timeout=10)
+        mine.restore_favorites_default_state()
 
