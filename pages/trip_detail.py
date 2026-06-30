@@ -192,14 +192,16 @@ class TripDetailPage(BasePage):
         edit_button.click()
         time.sleep(1.2)
 
-    def wait_loaded(self, trip_name: str, *, timeout: float = 10) -> None:
+    def wait_loaded(self, trip_name: str, *, timeout: float = 10) -> dict[str, object]:
         """等待我的行程详情页加载完成。"""
-        self.wait_xpath(self.ROOT_XPATH, "行程详情页根节点", timeout=timeout)
-        self.wait_xpath(
-            self.route_trip_title_xpath(trip_name),
-            f"行程详情页标题{trip_name}",
-            timeout=timeout,
-        )
+        return {
+            "root": self.wait_xpath(self.ROOT_XPATH, "行程详情页根节点", timeout=timeout),
+            "title": self.wait_xpath(
+                self.route_trip_title_xpath(trip_name),
+                f"行程详情页标题{trip_name}",
+                timeout=timeout,
+            ),
+        }
 
     def wait_returned_from_play_mode(
         self,

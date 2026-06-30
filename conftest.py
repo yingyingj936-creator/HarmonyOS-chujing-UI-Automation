@@ -250,9 +250,9 @@ def _start_outbound_service(settings: AppSettings) -> None:
     time.sleep(settings.startup_wait_seconds)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def driver(app_settings: AppSettings):
-    """全局 driver：连接设备并在会话结束后释放资源。"""
+    """全量会话复用同一个 UiDriver，并只在会话开始时启动一次应用。"""
     try:
         _assert_device_ready(app_settings)
         ui_driver = UiDriver.connect(device_sn=app_settings.target_device)
@@ -263,6 +263,19 @@ def driver(app_settings: AppSettings):
     try:
         yield ui_driver
     finally:
+        print("\n[Session Cleanup] 正在执行全量结束后的最终首页恢复...")
+        try:
+            if not _prepare_home(ui_driver, app_settings):
+                _start_outbound_service(app_settings)
+                if not _prepare_home(ui_driver, app_settings):
+                    print("[Session Cleanup] 最终首页恢复失败，请手动检查设备状态")
+            else:
+                print(
+                    "[Session Cleanup] 已恢复首页，"
+                    f"目的地={app_settings.default_destination}"
+                )
+        except Exception as exc:
+            print(f"[Session Cleanup] 最终首页恢复异常：{exc}")
         try:
             ui_driver.close()
         except Exception as exc:
@@ -305,8 +318,11 @@ def _return_to_home(driver, settings: AppSettings) -> bool:
     return home.is_at_home()
 
 
-def _restore_default_destination(driver, settings: AppSettings) -> bool:
-    """在首页恢复配置指定的默认目的地。"""
+def _restore_default_destination(
+    driver,
+    settings: AppSettings,
+) -> tuple[bool, bool]:
+    """恢复默认目的地，返回（是否成功，是否实际发生切换）。"""
     home = OutboundHomePage(driver)
     destination_page = SelectDestinationPage(driver)
     destination_selector = BY.xpath(
@@ -314,7 +330,7 @@ def _restore_default_destination(driver, settings: AppSettings) -> bool:
     )
 
     if driver.wait_for_component(destination_selector, timeout=1) is not None:
-        return True
+        return True, False
     if settings.default_destination == "中国香港":
         hong_kong_content = driver.wait_for_component(
             BY.xpath(
@@ -324,15 +340,18 @@ def _restore_default_destination(driver, settings: AppSettings) -> bool:
             timeout=1,
         )
         if hong_kong_content is not None:
-            return True
+            return True, False
 
     try:
         home.tap_region_selector()
         destination_page.choose_destination(settings.default_destination)
     except Exception:
-        return False
+        return False, False
 
-    return driver.wait_for_component(destination_selector, timeout=8) is not None
+    restored = (
+        driver.wait_for_component(destination_selector, timeout=8) is not None
+    )
+    return restored, restored
 
 
 def _prepare_home(driver, settings: AppSettings) -> bool:
@@ -340,9 +359,15 @@ def _prepare_home(driver, settings: AppSettings) -> bool:
         return False
     if not _restore_home_top(driver):
         return False
-    if not _restore_default_destination(driver, settings):
+    destination_restored, destination_changed = _restore_default_destination(
+        driver,
+        settings,
+    )
+    if not destination_restored:
         return False
-    return _restore_home_top(driver)
+    if destination_changed:
+        return _restore_home_top(driver)
+    return True
 
 
 def _restore_home_top(driver) -> bool:
@@ -391,7 +416,7 @@ def restart_outbound_service(driver, app_settings: AppSettings):
 @pytest.fixture(scope="function", autouse=True)
 def reset_to_home(driver, app_settings: AppSettings):
     """
-    每个用例执行前后都恢复首页，避免前一条用例的导航栈污染后续用例。
+    每个用例开始前恢复首页；下一条用例负责修复上一条留下的页面状态。
     """
     print("\n[Setup] 正在确认测试从首页开始...")
     if not _prepare_home(driver, app_settings):
@@ -400,13 +425,6 @@ def reset_to_home(driver, app_settings: AppSettings):
             pytest.fail("前置恢复首页失败，终止当前用例")
 
     yield
-
-    print("\n[Cleanup] 正在重置环境回到首页...")
-    if not _prepare_home(driver, app_settings):
-        pytest.fail("后置恢复首页或默认目的地失败，设备状态可能污染后续用例")
-    print(
-        f"[Cleanup] 已确认回到首页，目的地={app_settings.default_destination}"
-    )
 
 
 def _item_filename(item: pytest.Item) -> str:

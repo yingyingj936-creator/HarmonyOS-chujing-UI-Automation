@@ -139,10 +139,10 @@ def test_rename_trip_from_detail_and_sync_to_trip_list(driver) -> None:
 
         with allure.step("步骤1：点击行程卡片进入详情页，再点击右上角编辑或重命名入口"):
             trip_manager.tap_trip(original_name)
-            trip_detail.wait_loaded(original_name, timeout=12)
+            trip_loaded = trip_detail.wait_loaded(original_name, timeout=12)
             assert_visible_and_attach_highlight(
                 driver,
-                BY.xpath(trip_detail.route_trip_title_xpath(original_name)),
+                trip_loaded["title"],
                 f"行程详情页-原标题{original_name}",
                 timeout=8,
                 attach_crop=False,

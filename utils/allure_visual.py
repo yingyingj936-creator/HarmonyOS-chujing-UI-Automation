@@ -133,11 +133,15 @@ def assert_visible_and_attach_highlight(
     attach_crop: bool = True,
 ) -> Any:
     """
-    Wait for component, then attach:
+    Wait for a selector, or reuse an existing component, then attach:
     1) full screenshot with highlighted rectangle
     2) optional cropped screenshot of target component
     """
-    component = driver.wait_for_component(selector, timeout=timeout)
+    component = (
+        selector
+        if hasattr(selector, "getBounds")
+        else driver.wait_for_component(selector, timeout=timeout)
+    )
     if component is None:
         attach_fullscreen(driver, f"{name}-未找到-全屏")
         raise AssertionError(f"未找到组件：{name}")
@@ -152,7 +156,8 @@ def assert_visible_and_attach_highlight(
             )
         )
         with Image.open(saved_raw_jpeg_path) as raw_image:
-            marked_image = raw_image.convert("RGB")
+            source_image = raw_image.convert("RGB")
+            marked_image = source_image.copy()
             draw = ImageDraw.Draw(marked_image)
             l, t, r, b = _normalize_rect(
                 left,
@@ -166,16 +171,19 @@ def assert_visible_and_attach_highlight(
             draw.rectangle([l, t, r, b], outline=outline_color, width=line_width)
             _attach_image(marked_image, f"{name}-圈选")
 
-        if attach_crop:
-            crop_jpeg_path = Path(temp_dir) / "crop.jpeg"
-            saved_crop_jpeg_path = Path(
-                driver.capture_screen(
-                    str(crop_jpeg_path),
-                    in_pc=True,
-                    area=component,
+            if attach_crop:
+                crop_l, crop_t, crop_r, crop_b = _normalize_rect(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    width=source_image.width,
+                    height=source_image.height,
+                    margin=0,
                 )
-            )
-            with Image.open(saved_crop_jpeg_path) as crop_image:
+                crop_image = source_image.crop(
+                    (crop_l, crop_t, crop_r + 1, crop_b + 1)
+                )
                 _attach_image(crop_image, f"{name}-局部")
     return component
 

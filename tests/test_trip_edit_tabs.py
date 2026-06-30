@@ -61,132 +61,108 @@ def test_trip_edit_page_tabs_switch_content(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        trip_edit.wait_loaded(timeout=12)
-        assert_visible_and_attach_highlight(
+        loaded = trip_edit.wait_loaded(timeout=12)
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.TAB_BAR_XPATH),
+            loaded["tab_bar"].getBounds(),
             "编辑行程页Tab栏",
-            timeout=8,
-            attach_crop=False,
         )
 
     with allure.step("步骤1：点击“Day1”Tab，校验卡片展示第1天地点和相邻距离"):
-        trip_edit.tap_day_1_tab(timeout=8)
-        trip_edit.wait_day_1_loaded(timeout=10)
+        day_1_tab = trip_edit.tap_day_1_tab(timeout=8)
+        day_1 = trip_edit.wait_day_1_loaded(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_edit.DAY_1_TAB_XPATH),
+            day_1_tab,
             "编辑行程页Tab-Day1",
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.CHILD_LIST_XPATH),
+            day_1["list"].getBounds(),
             "编辑行程页Day1地点列表",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.DAY_1_CHILD_POI_XPATH),
+            day_1["first_poi"].getBounds(),
             "编辑行程页Day1地点-通菜街",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.CHILD_DISTANCE_XPATH),
+            day_1["distance"].getBounds(),
             "编辑行程页Day1相邻距离",
-            timeout=8,
-            attach_crop=False,
         )
 
     with allure.step("步骤2：点击“Day2”Tab，校验卡片展示第2天地点和相邻距离"):
-        trip_edit.tap_day_2_tab(timeout=8)
-        trip_edit.wait_day_2_loaded(timeout=10)
+        day_2_tab = trip_edit.tap_day_2_tab(timeout=8)
+        day_2 = trip_edit.wait_day_2_loaded(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_edit.DAY_N_TAB_XPATH),
+            day_2_tab,
             "编辑行程页Tab-Day2",
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.CHILD_LIST_XPATH),
+            day_2["list"].getBounds(),
             "编辑行程页Day2地点列表",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.DAY_2_CHILD_POI_XPATH),
+            day_2["first_poi"].getBounds(),
             "编辑行程页Day2地点-铜锣湾",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.CHILD_DISTANCE_XPATH),
+            day_2["distance"].getBounds(),
             "编辑行程页Day2相邻距离",
-            timeout=8,
-            attach_crop=False,
         )
 
     with allure.step("步骤3：点击“待规划”Tab，校验展示待规划栏"):
-        trip_edit.tap_pending_tab(timeout=8)
-        trip_edit.wait_pending_loaded(timeout=10)
+        pending_tab = trip_edit.tap_pending_tab(timeout=8)
+        pending = trip_edit.wait_pending_loaded(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_edit.PENDING_TAB_XPATH),
+            pending_tab,
             "编辑行程页Tab-待规划",
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.CHILD_LIST_XPATH),
+            pending["list"].getBounds(),
             "编辑行程页待规划列表",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.PENDING_ADD_ENTRY_XPATH),
+            pending["add"].getBounds(),
             "编辑行程页待规划添加地点入口",
-            timeout=8,
-            attach_crop=False,
         )
 
     with allure.step("步骤4：点击“全览”Tab，校验全览展示各天汇总路线"):
-        trip_edit.tap_overview_tab(timeout=8)
-        trip_edit.wait_route_overview_loaded(timeout=10)
+        overview_tab = trip_edit.tap_overview_tab(timeout=8)
+        overview = trip_edit.wait_route_overview_loaded(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_edit.OVERVIEW_TAB_XPATH),
+            overview_tab,
             "编辑行程页Tab-全览",
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.OVERVIEW_LIST_XPATH),
+            overview["list"].getBounds(),
             "编辑行程页全览汇总路线列表",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.DAY_1_SECTION_XPATH),
+            overview["day_1"].getBounds(),
             "编辑行程页全览-Day1汇总",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(trip_edit.DAY_2_SECTION_XPATH),
+            overview["day_2"].getBounds(),
             "编辑行程页全览-Day2汇总",
-            timeout=8,
-            attach_crop=False,
         )

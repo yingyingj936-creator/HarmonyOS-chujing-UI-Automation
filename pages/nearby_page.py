@@ -31,6 +31,14 @@ class NearbyPage(BasePage):
     BOTTOM_NAV_ROOT_XPATH = '//*[@id="HwAuthDialog_rootId"]'
     EXPLORE_NEARBY_XPATH = '//*[@id="NearRootId"]//Text[@text="探索附近"]'
     FOOD_CATEGORY_XPATH = '//*[@id="NearRootId"]//Text[@text="找美食"]'
+    READY_XPATH = (
+        '//*[@id="NearRootId" '
+        'and .//*[@id="mapview"] '
+        'and .//*[@id="nearby_map_bottom_panel"] '
+        'and .//*[@id="nearby_poiList"] '
+        'and .//Text[@text="探索附近"] '
+        'and .//Text[@text="找美食"]]'
+    )
     REGION_ENTRY_XPATH_TEMPLATE = (
         '//*[@id="NearRootId"]//*[@clickable="true" and .//Text[@text="{region_text}"]]'
     )
@@ -127,12 +135,7 @@ class NearbyPage(BasePage):
 
     def wait_loaded(self, *, timeout: float = 10) -> None:
         """等待附近页关键区域加载完成。"""
-        self.wait_xpath(self.ROOT_XPATH, "附近页根节点", timeout=timeout)
-        self.wait_xpath(self.MAP_XPATH, "附近页地图", timeout=timeout)
-        self.wait_xpath(self.SORT_PANEL_XPATH, "附近页底部卡片", timeout=timeout)
-        self.wait_xpath(self.EXPLORE_NEARBY_XPATH, "附近页探索附近分类", timeout=timeout)
-        self.wait_xpath(self.FOOD_CATEGORY_XPATH, "附近页找美食分类", timeout=timeout)
-        self.wait_xpath(self.POI_LIST_XPATH, "附近页POI列表", timeout=timeout)
+        self.wait_xpath(self.READY_XPATH, "附近页完整结构", timeout=timeout)
         self.wait_poi_names_loaded(timeout=timeout)
 
     def current_region_text(self, *, timeout: float = 8) -> str:

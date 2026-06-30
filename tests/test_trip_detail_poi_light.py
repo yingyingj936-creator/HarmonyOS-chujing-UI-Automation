@@ -47,10 +47,10 @@ def test_trip_detail_poi_light_and_close(driver) -> None:
             attach_crop=False,
         )
         trip_card.click()
-        trip_detail.wait_loaded(TRIP_NAME, timeout=12)
+        trip_loaded = trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_detail.route_trip_title_xpath(TRIP_NAME)),
+            trip_loaded["title"],
             f"行程详情页标题-{TRIP_NAME}",
             timeout=8,
             attach_crop=False,

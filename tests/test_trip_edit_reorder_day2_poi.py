@@ -1,5 +1,3 @@
-import time
-
 import allure
 import pytest
 from hypium import BY
@@ -179,7 +177,6 @@ def test_trip_edit_reorder_day2_first_poi_below_second(driver) -> None:
             "编辑行程页编辑完成按钮",
         )
         complete.click()
-        time.sleep(1.2)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         _assert_detail_day2_order(
             trip_detail,

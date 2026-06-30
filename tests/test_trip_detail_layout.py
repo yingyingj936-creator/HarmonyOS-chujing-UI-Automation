@@ -49,10 +49,10 @@ def test_trip_detail_layout_for_hongkong_food_route(driver) -> None:
 
     with allure.step("步骤1：点击行程卡片“香港逛吃两日游”，校验进入行程详情页"):
         trip_manager.tap_trip(TRIP_NAME)
-        trip_detail.wait_loaded(TRIP_NAME, timeout=12)
+        trip_loaded = trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_detail.route_trip_title_xpath(TRIP_NAME)),
+            trip_loaded["title"],
             f"行程详情页标题-{TRIP_NAME}",
             timeout=8,
             attach_crop=False,
@@ -61,7 +61,7 @@ def test_trip_detail_layout_for_hongkong_food_route(driver) -> None:
     with allure.step("步骤2：查看行程详情页顶部标题和重命名入口"):
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_detail.route_trip_title_xpath(TRIP_NAME)),
+            trip_loaded["title"],
             "行程详情顶部标题",
             timeout=8,
             attach_crop=False,

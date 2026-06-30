@@ -49,10 +49,10 @@ def test_trip_detail_view_map_play_mode_tabs_and_exit(driver) -> None:
             attach_crop=False,
         )
         trip_manager.tap_trip(TRIP_NAME)
-        trip_detail.wait_loaded(TRIP_NAME, timeout=12)
+        trip_loaded = trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(trip_detail.route_trip_title_xpath(TRIP_NAME)),
+            trip_loaded["title"],
             f"我的行程详情页-{TRIP_NAME}",
             timeout=8,
             attach_crop=False,
@@ -72,12 +72,12 @@ def test_trip_detail_view_map_play_mode_tabs_and_exit(driver) -> None:
             "游玩模式地图页根节点",
             timeout=15,
         )
-        route_detail.wait_xpath(
+        map_view = route_detail.wait_xpath(
             route_detail.MAP_VIEW_XPATH,
             "游玩模式地图背景",
             timeout=15,
         )
-        route_detail.wait_xpath(
+        tab_bar = route_detail.wait_xpath(
             route_detail.PLAY_MODE_TAB_BAR_XPATH,
             "游玩模式天数标签栏",
             timeout=15,
@@ -97,19 +97,15 @@ def test_trip_detail_view_map_play_mode_tabs_and_exit(driver) -> None:
             "游玩模式第2天标签",
             timeout=15,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(route_detail.MAP_VIEW_XPATH),
+            map_view.getBounds(),
             "游玩模式地图背景",
-            timeout=8,
-            attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
+        attach_highlighted_bounds(
             driver,
-            BY.xpath(route_detail.PLAY_MODE_TAB_BAR_XPATH),
+            tab_bar.getBounds(),
             "游玩模式全览和天数标签",
-            timeout=8,
-            attach_crop=False,
         )
         attach_highlighted_bounds(
             driver,
@@ -169,6 +165,7 @@ def test_trip_detail_view_map_play_mode_tabs_and_exit(driver) -> None:
             attach_crop=False,
         )
         route_detail.tap_play_mode_exit_button(timeout=8)
+        # 详情页节点可能仍保留在页面栈中，等待退出动画完成后再校验返回状态。
         time.sleep(1.2)
         trip_detail.wait_returned_from_play_mode(TRIP_NAME, timeout=12)
         assert_visible_and_attach_highlight(

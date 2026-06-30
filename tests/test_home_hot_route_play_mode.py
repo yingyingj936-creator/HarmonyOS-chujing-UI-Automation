@@ -19,10 +19,10 @@ def test_home_hot_route_one_click_play_mode(driver) -> None:
     with allure.step("前置条件：普通用户已进入“香港逛吃两日游”路线详情页"):
         home.restore_top(max_swipes=12)
         home.tap_hot_route_card(ROUTE_NAME)
-        route_detail.wait_loaded(ROUTE_NAME, timeout=15)
+        route_loaded = route_detail.wait_loaded(ROUTE_NAME, timeout=15)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(route_detail.overview_title_xpath(ROUTE_NAME)),
+            route_loaded["overview_title"],
             "香港逛吃两日游详情页",
             timeout=8,
             attach_crop=False,

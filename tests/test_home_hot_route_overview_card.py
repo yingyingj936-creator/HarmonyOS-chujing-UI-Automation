@@ -19,7 +19,7 @@ def test_home_hot_route_overview_day_card_to_day_view(driver) -> None:
     with allure.step("前置条件：普通用户进入“香港逛吃两日游”详情页"):
         home.restore_top(max_swipes=12)
         home.tap_hot_route_card(ROUTE_NAME)
-        route_detail.wait_loaded(ROUTE_NAME, timeout=15)
+        route_loaded = route_detail.wait_loaded(ROUTE_NAME, timeout=15)
 
     with allure.step("步骤1：查看“全览”标签下地图背景，校验全览标签已默认选中"):
         route_detail.wait_itinerary_tabs(timeout=10)
@@ -30,7 +30,7 @@ def test_home_hot_route_overview_day_card_to_day_view(driver) -> None:
         )
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(route_detail.MAP_VIEW_XPATH),
+            route_loaded["map"],
             "全览地图背景，展示所有天数路线",
             timeout=8,
             attach_crop=False,

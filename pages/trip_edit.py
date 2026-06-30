@@ -119,85 +119,114 @@ class TripEditPage(BasePage):
         bounds = component.getBounds()
         return int(bounds.right) > int(bounds.left) and int(bounds.bottom) > int(bounds.top)
 
-    def wait_loaded(self, *, timeout: float = 10) -> None:
+    def wait_loaded(self, *, timeout: float = 10) -> dict[str, Any]:
         """等待编辑行程页核心区域加载完成。"""
-        self.wait_xpath(self.TITLE_XPATH, "编辑行程页标题", timeout=timeout)
-        self.wait_xpath(self.MAP_VIEW_XPATH, "编辑行程页顶部地图", timeout=timeout)
-        self.wait_xpath(self.BOTTOM_PANEL_XPATH, "编辑行程页半卡片区域", timeout=timeout)
-        self.wait_xpath(self.TAB_BAR_XPATH, "编辑行程页半卡片Tab区域", timeout=timeout)
-        self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout)
-        self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout)
+        return {
+            "title": self.wait_xpath(self.TITLE_XPATH, "编辑行程页标题", timeout=timeout),
+            "map": self.wait_xpath(self.MAP_VIEW_XPATH, "编辑行程页顶部地图", timeout=timeout),
+            "panel": self.wait_xpath(self.BOTTOM_PANEL_XPATH, "编辑行程页半卡片区域", timeout=timeout),
+            "tab_bar": self.wait_xpath(self.TAB_BAR_XPATH, "编辑行程页半卡片Tab区域", timeout=timeout),
+            "overview_tab": self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout),
+            "overview_list": self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout),
+        }
 
-    def wait_tabs_loaded(self, *, timeout: float = 8) -> None:
+    def wait_tabs_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待全览、Day1、DayN、待规划等Tab展示。"""
-        self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout)
-        self.wait_xpath(self.DAY_1_TAB_XPATH, "编辑行程页Day1 Tab", timeout=timeout)
-        self.wait_xpath(self.DAY_N_TAB_XPATH, "编辑行程页DayN Tab", timeout=timeout)
-        self.wait_xpath(self.PENDING_TAB_XPATH, "编辑行程页待规划Tab", timeout=timeout)
+        return {
+            "overview": self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout),
+            "day_1": self.wait_xpath(self.DAY_1_TAB_XPATH, "编辑行程页Day1 Tab", timeout=timeout),
+            "day_n": self.wait_xpath(self.DAY_N_TAB_XPATH, "编辑行程页DayN Tab", timeout=timeout),
+            "pending": self.wait_xpath(self.PENDING_TAB_XPATH, "编辑行程页待规划Tab", timeout=timeout),
+        }
 
-    def wait_route_overview_loaded(self, *, timeout: float = 8) -> None:
+    def wait_route_overview_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待全览下按天展示的路线列表加载完成。"""
-        self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout)
-        self.wait_xpath(self.DAY_1_SECTION_XPATH, "编辑行程页Day1路线分组", timeout=timeout)
-        self.wait_xpath(self.DAY_2_SECTION_XPATH, "编辑行程页DayN路线分组", timeout=timeout)
-        self.wait_xpath(self.DAY_NUMBER_1_XPATH, "编辑行程页POI顺序1", timeout=timeout)
-        self.wait_xpath(self.DAY_NUMBER_2_XPATH, "编辑行程页POI顺序2", timeout=timeout)
-        self.wait_xpath(self.FIRST_DAY_POI_XPATH, "编辑行程页Day1首个POI", timeout=timeout)
-        self.wait_xpath(self.SECOND_DAY_POI_XPATH, "编辑行程页Day1第二个POI", timeout=timeout)
-        self.wait_xpath(self.DAY_N_POI_XPATH, "编辑行程页DayN POI", timeout=timeout)
+        return {
+            "list": self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout),
+            "day_1": self.wait_xpath(self.DAY_1_SECTION_XPATH, "编辑行程页Day1路线分组", timeout=timeout),
+            "day_2": self.wait_xpath(self.DAY_2_SECTION_XPATH, "编辑行程页DayN路线分组", timeout=timeout),
+            "number_1": self.wait_xpath(self.DAY_NUMBER_1_XPATH, "编辑行程页POI顺序1", timeout=timeout),
+            "number_2": self.wait_xpath(self.DAY_NUMBER_2_XPATH, "编辑行程页POI顺序2", timeout=timeout),
+            "first_poi": self.wait_xpath(self.FIRST_DAY_POI_XPATH, "编辑行程页Day1首个POI", timeout=timeout),
+            "second_poi": self.wait_xpath(self.SECOND_DAY_POI_XPATH, "编辑行程页Day1第二个POI", timeout=timeout),
+            "day_n_poi": self.wait_xpath(self.DAY_N_POI_XPATH, "编辑行程页DayN POI", timeout=timeout),
+        }
 
-    def tap_overview_tab(self, *, timeout: float = 8) -> None:
+    def tap_overview_tab(self, *, timeout: float = 8) -> Any:
         """点击全览Tab。"""
-        self.tap_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout)
+        component = self.tap_xpath(
+            self.OVERVIEW_TAB_XPATH,
+            "编辑行程页全览Tab",
+            timeout=timeout,
+        )
         time.sleep(1.0)
+        return component
 
-    def tap_day_1_tab(self, *, timeout: float = 8) -> None:
+    def tap_day_1_tab(self, *, timeout: float = 8) -> Any:
         """点击Day1 Tab。"""
-        self.tap_xpath(self.DAY_1_TAB_XPATH, "编辑行程页Day1 Tab", timeout=timeout)
+        component = self.tap_xpath(
+            self.DAY_1_TAB_XPATH,
+            "编辑行程页Day1 Tab",
+            timeout=timeout,
+        )
         time.sleep(1.0)
+        return component
 
-    def tap_day_2_tab(self, *, timeout: float = 8) -> None:
+    def tap_day_2_tab(self, *, timeout: float = 8) -> Any:
         """点击Day2 Tab。"""
-        self.tap_xpath(self.DAY_N_TAB_XPATH, "编辑行程页Day2 Tab", timeout=timeout)
+        component = self.tap_xpath(
+            self.DAY_N_TAB_XPATH,
+            "编辑行程页Day2 Tab",
+            timeout=timeout,
+        )
         time.sleep(1.0)
+        return component
 
-    def tap_day_3_tab(self, *, timeout: float = 8) -> None:
+    def tap_day_3_tab(self, *, timeout: float = 8) -> Any:
         """点击Day3 Tab。"""
-        self.tap_xpath(self.DAY_3_TAB_XPATH, "编辑行程页Day3 Tab", timeout=timeout)
+        component = self.tap_xpath(
+            self.DAY_3_TAB_XPATH,
+            "编辑行程页Day3 Tab",
+            timeout=timeout,
+        )
         time.sleep(1.0)
+        return component
 
-    def tap_pending_tab(self, *, timeout: float = 8) -> None:
+    def tap_pending_tab(self, *, timeout: float = 8) -> Any:
         """点击待规划Tab。"""
-        self.tap_xpath(self.PENDING_TAB_XPATH, "编辑行程页待规划Tab", timeout=timeout)
+        component = self.tap_xpath(
+            self.PENDING_TAB_XPATH,
+            "编辑行程页待规划Tab",
+            timeout=timeout,
+        )
         time.sleep(1.0)
+        return component
 
-    def wait_day_1_loaded(self, *, timeout: float = 8) -> None:
+    def wait_day_1_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待Day1路线卡片加载完成。"""
-        self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day1列表", timeout=timeout)
-        self.wait_xpath(self.DAY_1_CHILD_POI_XPATH, "编辑行程页Day1地点", timeout=timeout)
-        self.wait_xpath(
-            self.DAY_1_CHILD_SECOND_POI_XPATH,
-            "编辑行程页Day1第二个地点",
-            timeout=timeout,
-        )
-        self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day1相邻距离", timeout=timeout)
+        return {
+            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day1列表", timeout=timeout),
+            "first_poi": self.wait_xpath(self.DAY_1_CHILD_POI_XPATH, "编辑行程页Day1地点", timeout=timeout),
+            "second_poi": self.wait_xpath(self.DAY_1_CHILD_SECOND_POI_XPATH, "编辑行程页Day1第二个地点", timeout=timeout),
+            "distance": self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day1相邻距离", timeout=timeout),
+        }
 
-    def wait_day_2_loaded(self, *, timeout: float = 8) -> None:
+    def wait_day_2_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待Day2路线卡片加载完成。"""
-        self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day2列表", timeout=timeout)
-        self.wait_xpath(self.DAY_2_CHILD_POI_XPATH, "编辑行程页Day2地点", timeout=timeout)
-        self.wait_xpath(
-            self.DAY_2_CHILD_SECOND_POI_XPATH,
-            "编辑行程页Day2第二个地点",
-            timeout=timeout,
-        )
-        self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day2相邻距离", timeout=timeout)
+        return {
+            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day2列表", timeout=timeout),
+            "first_poi": self.wait_xpath(self.DAY_2_CHILD_POI_XPATH, "编辑行程页Day2地点", timeout=timeout),
+            "second_poi": self.wait_xpath(self.DAY_2_CHILD_SECOND_POI_XPATH, "编辑行程页Day2第二个地点", timeout=timeout),
+            "distance": self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day2相邻距离", timeout=timeout),
+        }
 
-    def wait_pending_loaded(self, *, timeout: float = 8) -> None:
+    def wait_pending_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待待规划栏加载完成。"""
-        self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页待规划列表", timeout=timeout)
-        self.wait_xpath(self.PENDING_ADD_ENTRY_XPATH, "编辑行程页待规划添加入口", timeout=timeout)
-        self.wait_xpath(self.PENDING_POI_XPATH, "编辑行程页待规划地点", timeout=timeout)
+        return {
+            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页待规划列表", timeout=timeout),
+            "add": self.wait_xpath(self.PENDING_ADD_ENTRY_XPATH, "编辑行程页待规划添加入口", timeout=timeout),
+            "poi": self.wait_xpath(self.PENDING_POI_XPATH, "编辑行程页待规划地点", timeout=timeout),
+        }
 
     def wait_day_3_empty_loaded(self, *, timeout: float = 8) -> None:
         """等待新增Day3空列表加载完成。"""
@@ -251,6 +280,39 @@ class TripEditPage(BasePage):
             f"编辑行程页POI卡片-{poi_name}",
             timeout=timeout,
         )
+
+    def _child_poi_actionable_limits(self) -> tuple[int, int] | None:
+        """读取一次 Day 列表可操作区边界，供同一轮滑动复用。"""
+        child_list = self.find_xpath(self.CHILD_LIST_XPATH)
+        if child_list is None:
+            return None
+
+        list_bounds = child_list.getBounds()
+        top_limit = int(list_bounds.top) + 8
+        bottom_limit = int(list_bounds.bottom) - 8
+        complete_button = self.find_xpath(self.EDIT_COMPLETE_XPATH)
+        if complete_button is not None:
+            complete_bounds = complete_button.getBounds()
+            # XPath 命中的是按钮文字，真实蓝色按钮容器会比文字顶部更高。
+            bottom_limit = min(bottom_limit, int(complete_bounds.top) - 60)
+        return top_limit, bottom_limit
+
+    def _is_child_poi_card_actionable(
+        self,
+        card: Any,
+        limits: tuple[int, int] | None = None,
+    ) -> bool:
+        """判断 POI 卡片完整位于列表可操作区，且未被底部完成按钮遮挡。"""
+        if limits is None:
+            limits = self._child_poi_actionable_limits()
+        if limits is None:
+            return False
+
+        card_bounds = card.getBounds()
+        card_top = int(card_bounds.top)
+        card_bottom = int(card_bounds.bottom)
+        top_limit, bottom_limit = limits
+        return card_top >= top_limit and card_bottom <= bottom_limit
 
     def child_poi_select_icon(
         self,
@@ -507,16 +569,34 @@ class TripEditPage(BasePage):
         max_swipes: int = 12,
         timeout: float = 8,
     ) -> Any:
-        """滚动当前 Day 子列表，直到指定 POI 可见。"""
+        """滚动当前 Day 子列表，直到指定 POI 卡片完整处于可操作区。"""
         xpath = self.child_poi_text_xpath(poi_name)
+        actionable_limits: tuple[int, int] | None = None
         for swipe_count in range(max_swipes + 1):
             component = self.driver.wait_for_component(BY.xpath(xpath), timeout=0.8)
             if component is not None:
-                return component
+                card = self.find_xpath(self.child_poi_card_xpath(poi_name))
+                if card is not None:
+                    actionable_limits = (
+                        actionable_limits or self._child_poi_actionable_limits()
+                    )
+                    if self._is_child_poi_card_actionable(card, actionable_limits):
+                        return component
             if swipe_count == max_swipes:
                 break
             self.swipe_child_list_up()
-        return self.wait_xpath(xpath, f"编辑行程页POI-{poi_name}", timeout=timeout)
+        component = self.wait_xpath(
+            xpath,
+            f"编辑行程页POI-{poi_name}",
+            timeout=timeout,
+        )
+        card = self.child_poi_card(poi_name, timeout=timeout)
+        if not self._is_child_poi_card_actionable(card, actionable_limits):
+            raise RuntimeError(
+                f"[{self.PAGE_NAME}] POI“{poi_name}”已出现但仍被边缘或底部按钮遮挡，"
+                f"卡片bounds={card.getBounds()}"
+            )
+        return component
 
     def assert_child_poi_absent_while_scrolling(
         self,

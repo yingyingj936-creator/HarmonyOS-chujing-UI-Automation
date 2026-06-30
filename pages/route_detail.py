@@ -204,15 +204,17 @@ class RouteDetailPage(BasePage):
     def play_mode_axis_poi_xpath(cls, poi_name: str) -> str:
         return f'//*[@id="map_bottom_tab_comp"]//Text[@text="{poi_name}"]'
 
-    def wait_loaded(self, route_name: str, *, timeout: float = 12) -> None:
+    def wait_loaded(self, route_name: str, *, timeout: float = 12) -> dict[str, object]:
         """Wait until the route detail map and overview card load."""
-        self.wait_xpath(self.ROOT_XPATH, "路线详情根节点", timeout=timeout)
-        self.wait_xpath(self.MAP_VIEW_XPATH, "路线地图背景", timeout=timeout)
-        self.wait_xpath(
-            self.overview_title_xpath(route_name),
-            "路线概览标题",
-            timeout=timeout,
-        )
+        return {
+            "root": self.wait_xpath(self.ROOT_XPATH, "路线详情根节点", timeout=timeout),
+            "map": self.wait_xpath(self.MAP_VIEW_XPATH, "路线地图背景", timeout=timeout),
+            "overview_title": self.wait_xpath(
+                self.overview_title_xpath(route_name),
+                "路线概览标题",
+                timeout=timeout,
+            ),
+        }
 
     def wait_overview_modules(self, *, timeout: float = 8) -> None:
         """Verify overview highlights, key spots, and itinerary modules."""

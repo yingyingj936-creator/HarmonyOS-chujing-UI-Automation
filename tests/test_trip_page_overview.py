@@ -16,6 +16,7 @@ def test_trip_page_create_area_and_my_trip_list(driver) -> None:
     with allure.step("步骤1：点击底部导航“行程”，校验行程页打开成功"):
         navigation.tap_trip()
         trip_manager.wait_loaded(timeout=10)
+        trip_manager.scroll_to_create_area(max_swipes=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(navigation.tab_xpath("行程")),

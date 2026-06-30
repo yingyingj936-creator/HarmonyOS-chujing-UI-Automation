@@ -1,5 +1,3 @@
-import time
-
 import allure
 import pytest
 from hypium import BY
@@ -185,7 +183,6 @@ def test_trip_edit_copy_day1_poi_to_pending(driver) -> None:
             "编辑行程页编辑完成按钮",
         )
         complete.click()
-        time.sleep(1.2)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         _assert_detail_day1_and_pending_have_poi(
             driver,

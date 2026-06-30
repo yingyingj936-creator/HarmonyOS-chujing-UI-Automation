@@ -1,5 +1,3 @@
-import time
-
 import allure
 import pytest
 from hypium import BY
@@ -188,7 +186,6 @@ def test_trip_edit_day1_delete_second_poi(driver) -> None:
             "编辑行程页编辑完成按钮",
         )
         complete.click()
-        time.sleep(1.2)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
 
         day_1 = trip_detail.scroll_until_xpath_visible(

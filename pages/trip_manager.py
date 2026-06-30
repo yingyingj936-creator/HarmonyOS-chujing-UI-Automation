@@ -27,6 +27,18 @@ class TripManagerPage(BasePage):
     DELETE_CANCEL_BUTTON_XPATH = '//Dialog//Text[@text="取消"]'
     SCREEN_ROOT_XPATH = '//*[@id="HwAuthDialog_rootId"]'
     BOTTOM_TRIP_TAB_XPATH = '//*[@id="HwAuthDialog_rootId"]//Text[@text="行程"]'
+    PAGE_READY_TEXT_XPATH = (
+        '//Text[@text="创建行程" or @text="我的行程" or @text="行程" '
+        'or (contains(@text, "参考热门路线") and contains(@text, "修改")) '
+        'or contains(@text, "查看视频教程")]'
+    )
+    MY_TRIPS_AREA_MARKER_XPATH = (
+        '//Text[@text="我的行程" or contains(@text, "查看视频教程")]'
+    )
+    TOP_AREA_MARKER_XPATH = (
+        '//Text[@text="创建行程" '
+        'or (contains(@text, "参考热门路线") and contains(@text, "修改"))]'
+    )
 
     @staticmethod
     def _xpath(xpath: str):
@@ -66,6 +78,15 @@ class TripManagerPage(BasePage):
         if right <= left or bottom <= top or bottom <= 0:
             return None
         return component
+
+    def _has_visible_xpath(self, xpath: str) -> bool:
+        """一次查询全部候选，判断是否至少有一个节点真实可见。"""
+        components = self.driver.find_all_components(BY.xpath(xpath))
+        for component in self._as_list(components):
+            left, top, right, bottom = self._bounds_tuple(component)
+            if right > left and bottom > top and bottom > 0:
+                return True
+        return False
 
     def _visible_trip_card(self, xpath: str):
         """返回未被底部导航遮挡的完整行程卡片。"""
@@ -163,24 +184,24 @@ class TripManagerPage(BasePage):
         """等待行程页核心区域加载完成。"""
         deadline = time.time() + timeout
         while time.time() < deadline:
+            components = self.driver.find_all_components(
+                BY.xpath(self.PAGE_READY_TEXT_XPATH)
+            )
+            texts = {
+                (component.getText() or "").strip()
+                for component in self._as_list(components)
+            }
+            has_hot_route = any(
+                "参考热门路线" in text and "修改" in text for text in texts
+            )
+            has_create = "创建行程" in texts
+            has_my_trips = "我的行程" in texts
+            has_video = any("查看视频教程" in text for text in texts)
+            has_trip_tab = "行程" in texts
             if (
-                self.find_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
-                and self.find_xpath(self.MY_TRIPS_TITLE_XPATH) is not None
-            ):
-                return
-            if (
-                self.find_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
-                and self.find_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
-            ):
-                return
-            if (
-                self.find_xpath(self.SCREEN_ROOT_XPATH) is not None
-                and self.find_xpath(self.BOTTOM_TRIP_TAB_XPATH) is not None
-                and (
-                    self.find_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
-                    or self.find_xpath(self.MY_TRIPS_TITLE_XPATH) is not None
-                    or self.find_xpath(self.VIDEO_TUTORIAL_XPATH) is not None
-                )
+                has_hot_route and (has_my_trips or has_create)
+            ) or (
+                has_trip_tab and (has_create or has_my_trips or has_video)
             ):
                 return
             time.sleep(0.5)
@@ -189,6 +210,31 @@ class TripManagerPage(BasePage):
             f"[{self.PAGE_NAME}] 未找到行程页核心区域，timeout={timeout}s"
         )
 
+    def scroll_to_create_area(
+        self,
+        *,
+        max_swipes: int = 12,
+        trip_list=None,
+    ) -> None:
+        """恢复到行程页顶部创建区域，兼容页面保留上次滚动位置。"""
+        if trip_list is None:
+            trip_list = self.wait_xpath(
+                self.TRIP_LIST_XPATH,
+                "行程页滚动列表",
+            )
+        for swipe_count in range(max_swipes + 1):
+            if self._has_visible_xpath(self.TOP_AREA_MARKER_XPATH):
+                return
+            if swipe_count == max_swipes:
+                break
+            self.driver.swipe(
+                "DOWN",
+                distance=70,
+                area=trip_list,
+            )
+            time.sleep(0.35)
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未回到行程页创建区域")
+
     def scroll_to_my_trips_area(self, *, max_swipes: int = 6) -> None:
         """滚动到我的行程区域。"""
         trip_list = self.wait_xpath(
@@ -196,10 +242,7 @@ class TripManagerPage(BasePage):
             "行程页滚动列表",
         )
         for swipe_count in range(max_swipes + 1):
-            if (
-                self.find_xpath(self.MY_TRIPS_TITLE_XPATH) is not None
-                or self.find_xpath(self.VIDEO_TUTORIAL_XPATH) is not None
-            ):
+            if self.find_xpath(self.MY_TRIPS_AREA_MARKER_XPATH) is not None:
                 return
             if swipe_count == max_swipes:
                 break
@@ -483,18 +526,10 @@ class TripManagerPage(BasePage):
 
         # 行程页会保留上次滚动位置。先回到页面顶部，再从“我的行程”区域向下扫描，
         # 避免从列表底部继续上拉而漏掉被新增行程挤到中间的目标卡片。
-        for _ in range(max(max_swipes, 12)):
-            if (
-                self._visible_xpath(self.CREATE_TRIP_TITLE_XPATH) is not None
-                or self._visible_xpath(self.HOT_ROUTE_REFERENCE_XPATH) is not None
-            ):
-                break
-            self.driver.swipe(
-                "DOWN",
-                distance=70,
-                area=trip_list,
-            )
-            time.sleep(0.35)
+        self.scroll_to_create_area(
+            max_swipes=max(max_swipes, 12),
+            trip_list=trip_list,
+        )
 
         self.scroll_to_my_trips_area(max_swipes=max(max_swipes, 10))
         scan_swipes = max(max_swipes, 24)

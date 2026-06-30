@@ -33,6 +33,10 @@ class MinePage(BasePage):
         '//Row[./Text[contains(@text, "帖子")]]'
     )
     FAVORITE_POSTS_TEXT_XPATH = '//Text[contains(@text, "帖子")]'
+    CONTENT_STATE_TEXT_XPATH = (
+        '//Text[@text="加载中..." or @text="小星星的旅程" or @text="收藏" '
+        'or contains(@text, "帖子")]'
+    )
     PAGE_SCROLL_XPATH = '//List[@scrollable="true"]'
     MINE_ENTRY_NAMES = (
         "我的订单",
@@ -160,12 +164,19 @@ class MinePage(BasePage):
         """等待“我的”页从 loading 态切到真实内容，避免过早查找收藏标签。"""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            loading = self.find_xpath(self.LOADING_XPATH)
-            if loading is None and (
-                self.find_xpath(self.PROFILE_TITLE_XPATH) is not None
-                or self.find_xpath(self.FAVORITES_TITLE_XPATH) is not None
-                or self.find_xpath(self.FAVORITE_POSTS_TAB_XPATH) is not None
-            ):
+            components = self.driver.find_all_components(
+                BY.xpath(self.CONTENT_STATE_TEXT_XPATH)
+            )
+            texts = {
+                (component.getText() or "").strip()
+                for component in self._as_list(components)
+            }
+            has_content = (
+                "小星星的旅程" in texts
+                or "收藏" in texts
+                or any("帖子" in text for text in texts)
+            )
+            if "加载中..." not in texts and has_content:
                 return
             time.sleep(0.5)
 

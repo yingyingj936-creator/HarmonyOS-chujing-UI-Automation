@@ -1040,17 +1040,16 @@ class OutboundHomePage(BasePage):
     def restore_top(self, *, max_swipes: int = 12) -> None:
         """测试结束后将首页恢复到顶部，避免污染后续用例。"""
         # 搜索框和攻略分类栏会吸顶，不能作为“已回到顶部”的依据。
-        top_module_xpaths = (
-            self.SERVICE_TAB_ROW_XPATH,
-            self.KINGKONG_ENTRY_GRID_XPATH,
-            self.SCENIC_TICKET_ENTRY_XPATH,
-        )
         for _ in range(max_swipes + 1):
-            if (
-                self.find_xpath(self.HOME_ROOT_XPATH) is not None
-                and self._is_any_xpath_visibly_rendered(top_module_xpaths)
-            ):
-                return
+            top_module = self.find_xpath(self.HOME_RECOMMENDS_SECTION_XPATH)
+            if top_module is not None:
+                bounds = top_module.getBounds()
+                if (
+                    int(bounds.right) > int(bounds.left)
+                    and int(bounds.bottom) > int(bounds.top)
+                    and int(bounds.bottom) > 0
+                ):
+                    return
             self._swipe_home_down()
         raise RuntimeError(f"[{self.PAGE_NAME}] 无法将首页恢复到顶部")
 
@@ -1063,20 +1062,6 @@ class OutboundHomePage(BasePage):
             swipe_time=0.5,
         )
         time.sleep(0.4)
-
-    def _is_any_xpath_visibly_rendered(self, xpaths: tuple[str, ...]) -> bool:
-        """判断任一真实顶部业务模块可见，过滤零尺寸/反向 bounds 的节点。"""
-        for xpath in xpaths:
-            component = self.driver.wait_for_component(
-                BY.xpath(xpath),
-                timeout=0.3,
-            )
-            if component is None:
-                continue
-            bounds = component.getBounds()
-            if int(bounds.right) > int(bounds.left) and int(bounds.bottom) > int(bounds.top):
-                return True
-        return False
 
     def wait_loaded(self, timeout: float = 8) -> bool:
         """等待首页标识元素出现。"""

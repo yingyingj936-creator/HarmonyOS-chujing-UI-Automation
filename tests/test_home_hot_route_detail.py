@@ -30,18 +30,18 @@ def test_home_hot_route_detail_browsing(driver) -> None:
 
     with allure.step("步骤1：点击首页热门路线“香港逛吃两日游”，校验详情页概览内容"):
         home.tap_hot_route_card(ROUTE_NAME)
-        route_detail.wait_loaded(ROUTE_NAME, timeout=15)
+        route_loaded = route_detail.wait_loaded(ROUTE_NAME, timeout=15)
         route_detail.wait_overview_modules(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(route_detail.MAP_VIEW_XPATH),
+            route_loaded["map"],
             "路线详情页地图背景",
             timeout=8,
             attach_crop=False,
         )
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(route_detail.overview_title_xpath(ROUTE_NAME)),
+            route_loaded["overview_title"],
             "路线概览卡片",
             timeout=8,
             attach_crop=False,
