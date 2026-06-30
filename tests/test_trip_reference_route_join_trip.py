@@ -100,17 +100,19 @@ def test_reference_hot_route_join_trip_and_show_in_my_trip_list(driver) -> None:
             attach_crop=False,
         )
         route_detail.tap_join_trip(timeout=10)
+        add_to_trip.wait_trip_name_value(ROUTE_NAME, timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(add_to_trip.trip_name_input_value_xpath(ROUTE_NAME)),
+            BY.xpath(add_to_trip.TRIP_NAME_INPUT_XPATH),
             f"创建行程弹窗-默认名称{ROUTE_NAME}",
             timeout=8,
             attach_crop=False,
         )
         add_to_trip.clear_and_input_trip_name(trip_name)
+        add_to_trip.wait_trip_name_value(trip_name, timeout=8)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(add_to_trip.trip_name_input_value_xpath(trip_name)),
+            BY.xpath(add_to_trip.TRIP_NAME_INPUT_XPATH),
             f"创建行程弹窗-用例行程名称{trip_name}",
             timeout=8,
             attach_crop=False,

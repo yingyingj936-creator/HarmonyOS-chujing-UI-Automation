@@ -53,9 +53,10 @@ def test_home_hot_route_join_trip(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+        add_to_trip.wait_trip_name_value(ROUTE_NAME, timeout=10)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(add_to_trip.trip_name_input_value_xpath(ROUTE_NAME)),
+            BY.xpath(add_to_trip.TRIP_NAME_INPUT_XPATH),
             "创建行程弹窗-原路线名称自动回显",
             timeout=8,
             attach_crop=False,
@@ -63,9 +64,10 @@ def test_home_hot_route_join_trip(driver) -> None:
 
     with allure.step(f"步骤2：清空原名称，输入行程名称“{TRIP_NAME}”"):
         add_to_trip.clear_and_input_trip_name(TRIP_NAME)
+        add_to_trip.wait_trip_name_value(TRIP_NAME, timeout=8)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(add_to_trip.trip_name_input_value_xpath(TRIP_NAME)),
+            BY.xpath(add_to_trip.TRIP_NAME_INPUT_XPATH),
             f"创建行程弹窗-新名称{TRIP_NAME}",
             timeout=8,
             attach_crop=False,

@@ -297,23 +297,6 @@ class TripEditPage(BasePage):
             bottom_limit = min(bottom_limit, int(complete_bounds.top) - 60)
         return top_limit, bottom_limit
 
-    def _is_child_poi_card_actionable(
-        self,
-        card: Any,
-        limits: tuple[int, int] | None = None,
-    ) -> bool:
-        """判断 POI 卡片完整位于列表可操作区，且未被底部完成按钮遮挡。"""
-        if limits is None:
-            limits = self._child_poi_actionable_limits()
-        if limits is None:
-            return False
-
-        card_bounds = card.getBounds()
-        card_top = int(card_bounds.top)
-        card_bottom = int(card_bounds.bottom)
-        top_limit, bottom_limit = limits
-        return card_top >= top_limit and card_bottom <= bottom_limit
-
     def child_poi_select_icon(
         self,
         poi_name: str,
@@ -331,39 +314,9 @@ class TripEditPage(BasePage):
                 continue
 
             last_card = card
-            card_bounds = card.getBounds()
-            card_left = int(card_bounds.left)
-            card_top = int(card_bounds.top)
-            card_right = int(card_bounds.right)
-            card_bottom = int(card_bounds.bottom)
-
-            images = self._as_list(
-                self.driver.find_all_components(
-                    BY.xpath('//*[@id="route_editor_childs"]//Image')
-                )
-            )
-            candidates = []
-            for image in images:
-                bounds = image.getBounds()
-                left = int(bounds.left)
-                top = int(bounds.top)
-                right = int(bounds.right)
-                bottom = int(bounds.bottom)
-                width = right - left
-                height = bottom - top
-                if (
-                    card_left <= left
-                    and right <= min(card_right, card_left + 150)
-                    and card_top <= top
-                    and bottom <= card_bottom
-                    and 20 <= width <= 90
-                    and 20 <= height <= 90
-                ):
-                    candidates.append((top, left, image))
-
-            if candidates:
-                candidates.sort(key=lambda item: (item[0], item[1]))
-                return candidates[0][2]
+            icon = self._find_child_poi_select_icon_in_card(card)
+            if icon is not None:
+                return icon
             time.sleep(0.3)
 
         debug_bounds = None
@@ -373,6 +326,55 @@ class TripEditPage(BasePage):
             f"[{self.PAGE_NAME}] 未找到POI“{poi_name}”左侧勾选框，"
             f"timeout={timeout}s，卡片bounds={debug_bounds}"
         )
+
+    def _find_child_poi_select_icon_in_card(self, card: Any) -> Any | None:
+        """从已定位的 POI 卡片中查找左侧勾选框，避免重复查询卡片。"""
+        card_bounds = card.getBounds()
+        card_left = int(card_bounds.left)
+        card_top = int(card_bounds.top)
+        card_right = int(card_bounds.right)
+        card_bottom = int(card_bounds.bottom)
+
+        images = self._as_list(
+            self.driver.find_all_components(
+                BY.xpath('//*[@id="route_editor_childs"]//Image')
+            )
+        )
+        candidates = []
+        for image in images:
+            bounds = image.getBounds()
+            left = int(bounds.left)
+            top = int(bounds.top)
+            right = int(bounds.right)
+            bottom = int(bounds.bottom)
+            width = right - left
+            height = bottom - top
+            if (
+                card_left <= left
+                and right <= min(card_right, card_left + 150)
+                and card_top <= top
+                and bottom <= card_bottom
+                and 20 <= width <= 90
+                and 20 <= height <= 90
+            ):
+                candidates.append((top, left, image))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        return candidates[0][2]
+
+    @staticmethod
+    def _is_component_in_actionable_area(
+        component: Any,
+        limits: tuple[int, int] | None,
+    ) -> bool:
+        """判断组件是否完整位于 Day 列表可点击区域。"""
+        if limits is None:
+            return False
+        bounds = component.getBounds()
+        top_limit, bottom_limit = limits
+        return int(bounds.top) >= top_limit and int(bounds.bottom) <= bottom_limit
 
     def tap_child_poi_select_icon(
         self,
@@ -569,7 +571,7 @@ class TripEditPage(BasePage):
         max_swipes: int = 12,
         timeout: float = 8,
     ) -> Any:
-        """滚动当前 Day 子列表，直到指定 POI 卡片完整处于可操作区。"""
+        """滚动当前 Day 子列表，直到指定 POI 的勾选框处于可操作区。"""
         xpath = self.child_poi_text_xpath(poi_name)
         actionable_limits: tuple[int, int] | None = None
         for swipe_count in range(max_swipes + 1):
@@ -580,7 +582,11 @@ class TripEditPage(BasePage):
                     actionable_limits = (
                         actionable_limits or self._child_poi_actionable_limits()
                     )
-                    if self._is_child_poi_card_actionable(card, actionable_limits):
+                    select_icon = self._find_child_poi_select_icon_in_card(card)
+                    if select_icon is not None and self._is_component_in_actionable_area(
+                        select_icon,
+                        actionable_limits,
+                    ):
                         return component
             if swipe_count == max_swipes:
                 break
@@ -591,10 +597,15 @@ class TripEditPage(BasePage):
             timeout=timeout,
         )
         card = self.child_poi_card(poi_name, timeout=timeout)
-        if not self._is_child_poi_card_actionable(card, actionable_limits):
+        select_icon = self._find_child_poi_select_icon_in_card(card)
+        if select_icon is None or not self._is_component_in_actionable_area(
+            select_icon,
+            actionable_limits,
+        ):
             raise RuntimeError(
-                f"[{self.PAGE_NAME}] POI“{poi_name}”已出现但仍被边缘或底部按钮遮挡，"
-                f"卡片bounds={card.getBounds()}"
+                f"[{self.PAGE_NAME}] POI“{poi_name}”已出现但勾选框仍不可操作，"
+                f"卡片bounds={card.getBounds()}，"
+                f"勾选框bounds={select_icon.getBounds() if select_icon else None}"
             )
         return component
 

@@ -1,3 +1,7 @@
+import time
+
+from hypium import BY
+
 from pages.base_page import BasePage
 
 
@@ -25,10 +29,6 @@ class AddToTripPage(BasePage):
             f'//SheetPage//Text[{cls._text_match_condition(trip_name)}]'
         )
 
-    @staticmethod
-    def trip_name_input_value_xpath(trip_name: str) -> str:
-        return f'//Dialog//TextInput[@text="{trip_name}"]'
-
     def tap_new_trip(self) -> None:
         self.tap_xpath(self.NEW_TRIP_BUTTON_XPATH, "新建行程")
 
@@ -46,6 +46,32 @@ class AddToTripPage(BasePage):
         )
         component.clearText()
         component.inputText(trip_name)
+
+    def wait_trip_name_value(
+        self,
+        trip_name: str,
+        *,
+        timeout: float = 8,
+    ) -> object:
+        """等待命名输入框完成异步回显，并校验其真实文本值。"""
+        deadline = time.time() + timeout
+        last_value: str | None = None
+        while time.time() < deadline:
+            remaining = max(0.1, deadline - time.time())
+            component = self.driver.wait_for_component(
+                BY.xpath(self.TRIP_NAME_INPUT_XPATH),
+                timeout=min(1.0, remaining),
+            )
+            if component is not None:
+                last_value = (component.getText() or "").strip()
+                if last_value == trip_name:
+                    return component
+            time.sleep(0.2)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 行程名称输入框未显示期望值“{trip_name}”，"
+            f"实际值={last_value!r}，timeout={timeout}s"
+        )
 
     def tap_create_and_add(self) -> None:
         self.tap_xpath(self.CREATE_AND_ADD_XPATH, "创建并添加")

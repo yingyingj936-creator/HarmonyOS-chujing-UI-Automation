@@ -166,6 +166,7 @@ class TripManagerPage(BasePage):
 
     def tap_hot_route_reference(self, *, timeout: float = 8) -> None:
         """点击“参考热门路线修改”入口。"""
+        self.scroll_to_create_area(max_swipes=12)
         self.tap_xpath(
             self.HOT_ROUTE_REFERENCE_XPATH,
             "参考热门路线修改入口",
