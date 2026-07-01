@@ -46,61 +46,22 @@ def test_mine_page_layout_entries_and_feedback(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(mine.PROFILE_TITLE_XPATH),
-            "我的页-昵称",
-            timeout=8,
-            attach_crop=False,
-        )
-
     with allure.step("步骤2：查看我的页面布局，校验顶部入口、最近使用和收藏区域"):
         mine.ensure_entry_area_visible()
-        for entry_name in MinePage.MINE_ENTRY_NAMES:
-            assert_visible_and_attach_highlight(
-                driver,
-                BY.xpath(mine.mine_entry_xpath(entry_name)),
-                f"我的页入口-{entry_name}",
-                timeout=8,
-                attach_crop=False,
-            )
-
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(mine.RECENT_SERVICES_TITLE_XPATH),
-            "我的页-最近使用标题",
+            BY.xpath(mine.mine_entry_xpath("我的订单")),
+            "我的页顶部功能入口区域",
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(mine.RECENT_SERVICES_GRID_XPATH),
-            "我的页-最近使用服务列表",
+        mine.wait_xpath(
+            mine.RECENT_SERVICES_GRID_XPATH,
+            "我的页最近使用服务列表",
             timeout=8,
-            attach_crop=False,
         )
         mine.scroll_favorites_area_into_view(max_swipes=4)
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(mine.FAVORITES_TITLE_XPATH),
-            "我的页-收藏标题",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(mine.FAVORITE_PLACES_TAB_XPATH),
-            "我的页-收藏地点Tab",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(mine.FAVORITE_POSTS_TAB_XPATH),
-            "我的页-收藏帖子Tab",
-            timeout=8,
-            attach_crop=False,
-        )
+        mine.wait_favorites_tabs_loaded(timeout=8)
 
     with allure.step("步骤3：依次点击我的订单、优惠券、联系人、人工客服、更多并校验跳转"):
         entry_names = ("我的订单", "优惠券", "联系人", "人工客服", "更多")

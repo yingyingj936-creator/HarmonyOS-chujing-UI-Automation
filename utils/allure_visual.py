@@ -8,6 +8,9 @@ from typing import Any
 import allure
 from PIL import Image, ImageDraw
 
+from utils.allure_step_state import claim_step_visual
+from utils.component_cache import recent_component, remember_component
+
 
 def _attach_image(image: Image.Image, name: str) -> None:
     buffer = BytesIO()
@@ -72,8 +75,10 @@ def _normalize_rect(
     return l, t, r, b
 
 
-def attach_fullscreen(driver: Any, name: str) -> None:
+def attach_fullscreen(driver: Any, name: str, *, force: bool = False) -> None:
     """Capture current screen and attach it to Allure."""
+    if not force and not claim_step_visual():
+        return
     with TemporaryDirectory() as temp_dir:
         raw_jpeg_path = Path(temp_dir) / "fullscreen.jpeg"
         saved_jpeg_path = Path(
@@ -130,21 +135,27 @@ def assert_visible_and_attach_highlight(
     margin: int = 8,
     line_width: int = 6,
     outline_color: str = "#FF2D55",
-    attach_crop: bool = True,
+    attach_crop: bool = False,
 ) -> Any:
     """
     Wait for a selector, or reuse an existing component, then attach:
     1) full screenshot with highlighted rectangle
     2) optional cropped screenshot of target component
     """
-    component = (
-        selector
-        if hasattr(selector, "getBounds")
-        else driver.wait_for_component(selector, timeout=timeout)
-    )
+    if hasattr(selector, "getBounds"):
+        component = selector
+    else:
+        component = recent_component(driver, selector)
+        if component is None:
+            component = driver.wait_for_component(selector, timeout=timeout)
+            if component is not None:
+                remember_component(driver, selector, component)
     if component is None:
-        attach_fullscreen(driver, f"{name}-未找到-全屏")
+        attach_fullscreen(driver, f"{name}-未找到-全屏", force=True)
         raise AssertionError(f"未找到组件：{name}")
+
+    if not claim_step_visual():
+        return component
 
     left, top, right, bottom = _to_rect_tuple(component.getBounds())
     with TemporaryDirectory() as temp_dir:
@@ -198,6 +209,8 @@ def attach_highlighted_bounds(
     outline_color: str = "#FF2D55",
 ) -> None:
     """Attach a full screenshot with a highlighted arbitrary bounds rectangle."""
+    if not claim_step_visual():
+        return
     left, top, right, bottom = _to_rect_tuple(bounds)
     with TemporaryDirectory() as temp_dir:
         full_raw_jpeg_path = Path(temp_dir) / "fullscreen.jpeg"

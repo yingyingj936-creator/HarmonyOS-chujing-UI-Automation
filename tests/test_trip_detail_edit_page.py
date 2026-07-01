@@ -69,82 +69,26 @@ def test_trip_detail_edit_page_layout_and_back(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        loaded = trip_edit.wait_loaded(timeout=12)
+        trip_edit.wait_ready(timeout=12)
+        title = trip_edit.wait_xpath(
+            trip_edit.TITLE_XPATH,
+            "编辑行程页标题",
+            timeout=8,
+        )
         attach_highlighted_bounds(
             driver,
-            loaded["title"].getBounds(),
+            title.getBounds(),
             "编辑行程页标题",
         )
 
     with allure.step("步骤2：查看编辑页顶部地图、半卡片Tab、待规划、新增入口和全览路线列表"):
+        tab_bar = trip_edit.wait_tabs_ready(timeout=8)
+        trip_edit.wait_add_entry(timeout=8)
+        trip_edit.wait_route_overview_ready(timeout=10)
         attach_highlighted_bounds(
             driver,
-            loaded["map"].getBounds(),
-            "编辑行程页顶部地图路线区域",
-        )
-        attach_highlighted_bounds(
-            driver,
-            loaded["tab_bar"].getBounds(),
-            "编辑行程页半卡片Tab区域",
-        )
-        tabs = trip_edit.wait_tabs_loaded(timeout=8)
-        attach_highlighted_bounds(
-            driver,
-            tabs["overview"].getBounds(),
-            "编辑行程页Tab-全览",
-        )
-        attach_highlighted_bounds(
-            driver,
-            tabs["day_1"].getBounds(),
-            "编辑行程页Tab-Day1",
-        )
-        attach_highlighted_bounds(
-            driver,
-            tabs["day_n"].getBounds(),
-            "编辑行程页Tab-DayN",
-        )
-        attach_highlighted_bounds(
-            driver,
-            tabs["pending"].getBounds(),
-            "编辑行程页Tab-待规划",
-        )
-        add_entry = trip_edit.wait_add_entry(timeout=8)
-        attach_highlighted_bounds(
-            driver,
-            add_entry.getBounds(),
-            "编辑行程页新增入口",
-        )
-
-        overview = trip_edit.wait_route_overview_loaded(timeout=10)
-        attach_highlighted_bounds(
-            driver,
-            overview["list"].getBounds(),
-            "编辑行程页全览按天路线列表",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["day_1"].getBounds(),
-            "编辑行程页Day1路线分组",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["day_2"].getBounds(),
-            "编辑行程页DayN路线分组",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["number_1"].getBounds(),
-            "编辑行程页POI顺序编号1",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["first_poi"].getBounds(),
-            "编辑行程页单天POI-通菜街",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["second_poi"].getBounds(),
-            "编辑行程页单天POI-旺角",
+            tab_bar.getBounds(),
+            "编辑行程页Tab及全览路线区域",
         )
 
     with allure.step("步骤3：点击返回键，校验返回“香港逛吃两日游”行程详情页"):

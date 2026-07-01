@@ -121,36 +121,79 @@ class TripEditPage(BasePage):
 
     def wait_loaded(self, *, timeout: float = 10) -> dict[str, Any]:
         """等待编辑行程页核心区域加载完成。"""
-        return {
-            "title": self.wait_xpath(self.TITLE_XPATH, "编辑行程页标题", timeout=timeout),
-            "map": self.wait_xpath(self.MAP_VIEW_XPATH, "编辑行程页顶部地图", timeout=timeout),
-            "panel": self.wait_xpath(self.BOTTOM_PANEL_XPATH, "编辑行程页半卡片区域", timeout=timeout),
-            "tab_bar": self.wait_xpath(self.TAB_BAR_XPATH, "编辑行程页半卡片Tab区域", timeout=timeout),
-            "overview_tab": self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout),
-            "overview_list": self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "title": (self.TITLE_XPATH, "编辑行程页标题"),
+                "map": (self.MAP_VIEW_XPATH, "编辑行程页顶部地图"),
+                "panel": (self.BOTTOM_PANEL_XPATH, "编辑行程页半卡片区域"),
+                "tab_bar": (self.TAB_BAR_XPATH, "编辑行程页半卡片Tab区域"),
+                "overview_tab": (self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab"),
+                "overview_list": (self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_ready(self, *, timeout: float = 10) -> Any:
+        """一次查询等待编辑行程页核心区域，供不需要返回组件的流程使用。"""
+        ready_xpath = (
+            '//*[@id="map_bottom_panel" '
+            'and .//*[@id="tabBarList"] '
+            'and .//*[@id="route_editor_overview"]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页核心区域", timeout=timeout)
 
     def wait_tabs_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待全览、Day1、DayN、待规划等Tab展示。"""
-        return {
-            "overview": self.wait_xpath(self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab", timeout=timeout),
-            "day_1": self.wait_xpath(self.DAY_1_TAB_XPATH, "编辑行程页Day1 Tab", timeout=timeout),
-            "day_n": self.wait_xpath(self.DAY_N_TAB_XPATH, "编辑行程页DayN Tab", timeout=timeout),
-            "pending": self.wait_xpath(self.PENDING_TAB_XPATH, "编辑行程页待规划Tab", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "overview": (self.OVERVIEW_TAB_XPATH, "编辑行程页全览Tab"),
+                "day_1": (self.DAY_1_TAB_XPATH, "编辑行程页Day1 Tab"),
+                "day_n": (self.DAY_N_TAB_XPATH, "编辑行程页DayN Tab"),
+                "pending": (self.PENDING_TAB_XPATH, "编辑行程页待规划Tab"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_tabs_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待全览、Day1、Day2 和待规划 Tab。"""
+        ready_xpath = (
+            '//*[@id="tabBarList" '
+            'and .//Text[@text="全览" and @clickable="true"] '
+            'and .//Text[@text="Day1" and @clickable="true"] '
+            'and .//Text[@text="Day2" and @clickable="true"] '
+            'and .//Text[@text="待规划" and @clickable="true"]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页完整Tab栏", timeout=timeout)
 
     def wait_route_overview_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待全览下按天展示的路线列表加载完成。"""
-        return {
-            "list": self.wait_xpath(self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表", timeout=timeout),
-            "day_1": self.wait_xpath(self.DAY_1_SECTION_XPATH, "编辑行程页Day1路线分组", timeout=timeout),
-            "day_2": self.wait_xpath(self.DAY_2_SECTION_XPATH, "编辑行程页DayN路线分组", timeout=timeout),
-            "number_1": self.wait_xpath(self.DAY_NUMBER_1_XPATH, "编辑行程页POI顺序1", timeout=timeout),
-            "number_2": self.wait_xpath(self.DAY_NUMBER_2_XPATH, "编辑行程页POI顺序2", timeout=timeout),
-            "first_poi": self.wait_xpath(self.FIRST_DAY_POI_XPATH, "编辑行程页Day1首个POI", timeout=timeout),
-            "second_poi": self.wait_xpath(self.SECOND_DAY_POI_XPATH, "编辑行程页Day1第二个POI", timeout=timeout),
-            "day_n_poi": self.wait_xpath(self.DAY_N_POI_XPATH, "编辑行程页DayN POI", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "list": (self.OVERVIEW_LIST_XPATH, "编辑行程页全览路线列表"),
+                "day_1": (self.DAY_1_SECTION_XPATH, "编辑行程页Day1路线分组"),
+                "day_2": (self.DAY_2_SECTION_XPATH, "编辑行程页DayN路线分组"),
+                "number_1": (self.DAY_NUMBER_1_XPATH, "编辑行程页POI顺序1"),
+                "number_2": (self.DAY_NUMBER_2_XPATH, "编辑行程页POI顺序2"),
+                "first_poi": (self.FIRST_DAY_POI_XPATH, "编辑行程页Day1首个POI"),
+                "second_poi": (self.SECOND_DAY_POI_XPATH, "编辑行程页Day1第二个POI"),
+                "day_n_poi": (self.DAY_N_POI_XPATH, "编辑行程页DayN POI"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_route_overview_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待全览下两天路线、顺序编号和关键地点。"""
+        ready_xpath = (
+            '//*[@id="route_editor_overview" '
+            'and .//*[@clickable="true" and .//Text[@text="Day1"] '
+            'and .//Text[@text="通菜街"]] '
+            'and .//*[@clickable="true" and .//Text[@text="Day2"] '
+            'and .//Text[@text="铜锣湾"]] '
+            'and .//Text[@id="dayNumber" and @text="1"] '
+            'and .//Text[@id="dayNumber" and @text="2"] '
+            'and .//Text[@text="旺角"]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页全览路线内容", timeout=timeout)
 
     def tap_overview_tab(self, *, timeout: float = 8) -> Any:
         """点击全览Tab。"""
@@ -159,7 +202,6 @@ class TripEditPage(BasePage):
             "编辑行程页全览Tab",
             timeout=timeout,
         )
-        time.sleep(1.0)
         return component
 
     def tap_day_1_tab(self, *, timeout: float = 8) -> Any:
@@ -169,7 +211,6 @@ class TripEditPage(BasePage):
             "编辑行程页Day1 Tab",
             timeout=timeout,
         )
-        time.sleep(1.0)
         return component
 
     def tap_day_2_tab(self, *, timeout: float = 8) -> Any:
@@ -179,7 +220,6 @@ class TripEditPage(BasePage):
             "编辑行程页Day2 Tab",
             timeout=timeout,
         )
-        time.sleep(1.0)
         return component
 
     def tap_day_3_tab(self, *, timeout: float = 8) -> Any:
@@ -189,7 +229,6 @@ class TripEditPage(BasePage):
             "编辑行程页Day3 Tab",
             timeout=timeout,
         )
-        time.sleep(1.0)
         return component
 
     def tap_pending_tab(self, *, timeout: float = 8) -> Any:
@@ -199,40 +238,100 @@ class TripEditPage(BasePage):
             "编辑行程页待规划Tab",
             timeout=timeout,
         )
-        time.sleep(1.0)
         return component
 
     def wait_day_1_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待Day1路线卡片加载完成。"""
-        return {
-            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day1列表", timeout=timeout),
-            "first_poi": self.wait_xpath(self.DAY_1_CHILD_POI_XPATH, "编辑行程页Day1地点", timeout=timeout),
-            "second_poi": self.wait_xpath(self.DAY_1_CHILD_SECOND_POI_XPATH, "编辑行程页Day1第二个地点", timeout=timeout),
-            "distance": self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day1相邻距离", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "list": (self.CHILD_LIST_XPATH, "编辑行程页Day1列表"),
+                "first_poi": (self.DAY_1_CHILD_POI_XPATH, "编辑行程页Day1地点"),
+                "second_poi": (
+                    self.DAY_1_CHILD_SECOND_POI_XPATH,
+                    "编辑行程页Day1第二个地点",
+                ),
+                "distance": (self.CHILD_DISTANCE_XPATH, "编辑行程页Day1相邻距离"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_day_1_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待 Day1 列表及首个通菜街地点。"""
+        ready_xpath = (
+            '//*[@id="route_editor_childs" '
+            'and .//Text[contains(@text, "通菜街")]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页Day1路线内容", timeout=timeout)
+
+    def wait_day_1_content_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待 Day1 两个关键地点和相邻距离。"""
+        ready_xpath = (
+            '//*[@id="route_editor_childs" '
+            'and .//Text[contains(@text, "通菜街")] '
+            'and .//Text[contains(@text, "旺角")] '
+            'and .//Text[contains(@text, "km")]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页Day1完整路线", timeout=timeout)
 
     def wait_day_2_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待Day2路线卡片加载完成。"""
-        return {
-            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day2列表", timeout=timeout),
-            "first_poi": self.wait_xpath(self.DAY_2_CHILD_POI_XPATH, "编辑行程页Day2地点", timeout=timeout),
-            "second_poi": self.wait_xpath(self.DAY_2_CHILD_SECOND_POI_XPATH, "编辑行程页Day2第二个地点", timeout=timeout),
-            "distance": self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day2相邻距离", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "list": (self.CHILD_LIST_XPATH, "编辑行程页Day2列表"),
+                "first_poi": (self.DAY_2_CHILD_POI_XPATH, "编辑行程页Day2地点"),
+                "second_poi": (
+                    self.DAY_2_CHILD_SECOND_POI_XPATH,
+                    "编辑行程页Day2第二个地点",
+                ),
+                "distance": (self.CHILD_DISTANCE_XPATH, "编辑行程页Day2相邻距离"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_day_2_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待 Day2 两个关键地点和相邻距离。"""
+        ready_xpath = (
+            '//*[@id="route_editor_childs" '
+            'and .//Text[contains(@text, "铜锣湾")] '
+            'and .//Text[contains(@text, "希慎广场")] '
+            'and .//Text[contains(@text, "km")]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页Day2完整路线", timeout=timeout)
 
     def wait_pending_loaded(self, *, timeout: float = 8) -> dict[str, Any]:
         """等待待规划栏加载完成。"""
-        return {
-            "list": self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页待规划列表", timeout=timeout),
-            "add": self.wait_xpath(self.PENDING_ADD_ENTRY_XPATH, "编辑行程页待规划添加入口", timeout=timeout),
-            "poi": self.wait_xpath(self.PENDING_POI_XPATH, "编辑行程页待规划地点", timeout=timeout),
-        }
+        return self.snapshot_xpaths(
+            {
+                "list": (self.CHILD_LIST_XPATH, "编辑行程页待规划列表"),
+                "add": (self.PENDING_ADD_ENTRY_XPATH, "编辑行程页待规划添加入口"),
+                "poi": (self.PENDING_POI_XPATH, "编辑行程页待规划地点"),
+            },
+            timeout=timeout,
+        )
+
+    def wait_pending_ready(self, *, timeout: float = 8) -> Any:
+        """一次查询等待待规划栏、添加入口和已有地点。"""
+        ready_xpath = (
+            '//*[@id="route_editor_childs" '
+            'and .//Text[@text="添加地点/活动" or contains(@text, "添加地点")] '
+            'and .//Text[contains(@text, "坚尼地城") '
+            'or contains(@text, "太平山顶")]]'
+        )
+        return self.wait_xpath(ready_xpath, "编辑行程页待规划内容", timeout=timeout)
 
     def wait_day_3_empty_loaded(self, *, timeout: float = 8) -> None:
         """等待新增Day3空列表加载完成。"""
-        self.wait_xpath(self.DAY_3_TAB_XPATH, "编辑行程页Day3 Tab", timeout=timeout)
-        self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day3列表", timeout=timeout)
-        self.wait_xpath(self.PENDING_ADD_ENTRY_XPATH, "编辑行程页Day3添加地点活动入口", timeout=timeout)
+        self.snapshot_xpaths(
+            {
+                "tab": (self.DAY_3_TAB_XPATH, "编辑行程页Day3 Tab"),
+                "list": (self.CHILD_LIST_XPATH, "编辑行程页Day3列表"),
+                "add": (
+                    self.PENDING_ADD_ENTRY_XPATH,
+                    "编辑行程页Day3添加地点活动入口",
+                ),
+            },
+            timeout=timeout,
+        )
 
     def first_poi_select_icon(self, *, timeout: float = 8) -> Any:
         """返回 Day1 第一个 POI 左侧勾选框图标。"""
@@ -252,7 +351,6 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(0.8)
         return icon
 
     @classmethod
@@ -391,37 +489,15 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(0.8)
         return icon
 
     def wait_selection_action_menu_loaded(self, *, timeout: float = 8) -> Any:
         """等待选择 POI 后底部批量操作菜单展示完整。"""
-        menu = self.wait_xpath(
+        return self.wait_xpath(
             self.SELECTION_ACTION_MENU_XPATH,
             "编辑行程页POI选中后的批量操作菜单",
             timeout=timeout,
         )
-        self.wait_xpath(
-            self.SELECTION_CANCEL_ACTION_XPATH,
-            "编辑行程页选中菜单-取消",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.SELECTION_DELETE_ACTION_XPATH,
-            "编辑行程页选中菜单-删除",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.SELECTION_MOVE_ACTION_XPATH,
-            "编辑行程页选中菜单-移动到",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.SELECTION_COPY_ACTION_XPATH,
-            "编辑行程页选中菜单-复制到",
-            timeout=timeout,
-        )
-        return menu
 
     def selection_cancel_action(self, *, timeout: float = 8) -> Any:
         """返回选中菜单中的取消操作。"""
@@ -434,7 +510,6 @@ class TripEditPage(BasePage):
     def tap_selection_cancel(self, *, timeout: float = 8) -> None:
         """点击选中菜单中的取消操作。"""
         self.selection_cancel_action(timeout=timeout).click()
-        time.sleep(0.8)
 
     def selection_delete_action(self, *, timeout: float = 8) -> Any:
         """返回选中菜单中的删除操作。"""
@@ -447,7 +522,6 @@ class TripEditPage(BasePage):
     def tap_selection_delete(self, *, timeout: float = 8) -> None:
         """点击选中菜单中的删除操作。"""
         self.selection_delete_action(timeout=timeout).click()
-        time.sleep(0.8)
 
     def selection_move_action(self, *, timeout: float = 8) -> Any:
         """返回选中菜单中的移动到操作。"""
@@ -460,7 +534,6 @@ class TripEditPage(BasePage):
     def tap_selection_move(self, *, timeout: float = 8) -> None:
         """点击选中菜单中的移动到操作。"""
         self.selection_move_action(timeout=timeout).click()
-        time.sleep(0.8)
 
     def selection_copy_action(self, *, timeout: float = 8) -> Any:
         """返回选中菜单中的复制到操作。"""
@@ -473,26 +546,17 @@ class TripEditPage(BasePage):
     def tap_selection_copy(self, *, timeout: float = 8) -> None:
         """点击选中菜单中的复制到操作。"""
         self.selection_copy_action(timeout=timeout).click()
-        time.sleep(0.8)
 
     def wait_delete_confirm_loaded(self, *, timeout: float = 8) -> Any:
         """等待删除地点二次确认 Sheet 展示。"""
-        sheet = self.wait_xpath(
-            self.DELETE_CONFIRM_SHEET_XPATH,
-            "删除地点确认Sheet",
+        return self.snapshot_xpaths(
+            {
+                "sheet": (self.DELETE_CONFIRM_SHEET_XPATH, "删除地点确认Sheet"),
+                "cancel": (self.DELETE_CONFIRM_CANCEL_XPATH, "删除地点确认Sheet-取消"),
+                "delete": (self.DELETE_CONFIRM_BUTTON_XPATH, "删除地点确认Sheet-删除"),
+            },
             timeout=timeout,
-        )
-        self.wait_xpath(
-            self.DELETE_CONFIRM_CANCEL_XPATH,
-            "删除地点确认Sheet-取消",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.DELETE_CONFIRM_BUTTON_XPATH,
-            "删除地点确认Sheet-删除",
-            timeout=timeout,
-        )
-        return sheet
+        )["sheet"]
 
     def tap_confirm_delete_poi(self, *, timeout: float = 8) -> None:
         """在删除地点确认 Sheet 中点击删除。"""
@@ -501,7 +565,6 @@ class TripEditPage(BasePage):
             "删除地点确认Sheet-删除",
             timeout=timeout,
         )
-        time.sleep(1.2)
 
     def wait_delete_confirm_closed(self, *, timeout: float = 5) -> None:
         """等待删除地点确认 Sheet 消失。"""
@@ -691,10 +754,6 @@ class TripEditPage(BasePage):
 
     def wait_move_target_panel_loaded(self, *, timeout: float = 8) -> Any:
         """等待移动目标面板展示。"""
-        self.driver.wait_for_component(
-            BY.xpath(self.MOVE_TARGET_TITLE_XPATH),
-            timeout=1,
-        )
         return self.move_target_day_2(timeout=timeout)
 
     def tap_move_target_day_2(self, *, timeout: float = 8) -> None:
@@ -707,7 +766,6 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(1.2)
 
     def copy_target_pending(self, *, timeout: float = 8) -> Any:
         """返回复制目标里的待规划文本，避免点击顶部Tab。"""
@@ -741,10 +799,6 @@ class TripEditPage(BasePage):
 
     def wait_copy_target_panel_loaded(self, *, timeout: float = 8) -> Any:
         """等待复制目标面板展示。"""
-        self.driver.wait_for_component(
-            BY.xpath(self.COPY_TARGET_TITLE_XPATH),
-            timeout=1,
-        )
         return self.copy_target_pending(timeout=timeout)
 
     def tap_copy_target_pending(self, *, timeout: float = 8) -> None:
@@ -757,7 +811,6 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(1.2)
 
     def wait_copy_target_panel_closed(self, *, timeout: float = 5) -> None:
         """等待复制目标面板关闭，确认目标选择已被页面接受。"""
@@ -791,14 +844,13 @@ class TripEditPage(BasePage):
 
     def wait_day_1_after_wangjiao_deleted(self, *, timeout: float = 8) -> None:
         """等待 Day1 删除旺角后列表重新排序并刷新距离。"""
-        self.wait_xpath(self.CHILD_LIST_XPATH, "编辑行程页Day1列表", timeout=timeout)
-        self.wait_xpath(self.DAY_1_CHILD_POI_XPATH, "编辑行程页Day1地点-通菜街", timeout=timeout)
-        self.wait_xpath(
-            self.DAY_1_CHILD_REORDERED_SECOND_POI_XPATH,
-            "编辑行程页Day1删除旺角后的第二个地点-信和中心",
-            timeout=timeout,
+        ready_xpath = (
+            '//*[@id="route_editor_childs" '
+            'and .//Text[contains(@text, "通菜街")] '
+            'and .//Text[contains(@text, "2.") and contains(@text, "信和中心")] '
+            'and .//Text[contains(@text, "km")]]'
         )
-        self.wait_xpath(self.CHILD_DISTANCE_XPATH, "编辑行程页Day1相邻距离", timeout=timeout)
+        self.wait_xpath(ready_xpath, "编辑行程页Day1删除旺角后的路线", timeout=timeout)
         self.wait_child_poi_absent("旺角", timeout=timeout)
 
     def wait_selection_action_menu_closed(self, *, timeout: float = 5) -> None:
@@ -866,7 +918,6 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(1.2)
         return entry
 
     def child_add_place_entry(self, *, timeout: float = 8) -> Any:
@@ -880,7 +931,6 @@ class TripEditPage(BasePage):
     def tap_child_add_place_entry(self, *, timeout: float = 8) -> None:
         """点击当前Day列表里的添加地点/活动入口。"""
         self.child_add_place_entry(timeout=timeout).click()
-        time.sleep(1.0)
 
     @classmethod
     def add_poi_result_text_xpath(cls, poi_name: str) -> str:
@@ -903,7 +953,6 @@ class TripEditPage(BasePage):
             "添加地点搜索框",
             timeout=timeout,
         )
-        time.sleep(1.5)
         return search_input
 
     def add_poi_search_result(self, poi_name: str, *, timeout: float = 8) -> Any:
@@ -933,7 +982,6 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(1.8)
         return result
 
     def back_button(self, *, timeout: float = 8) -> Any:
@@ -980,5 +1028,4 @@ class TripEditPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
-        time.sleep(1.2)
         return complete

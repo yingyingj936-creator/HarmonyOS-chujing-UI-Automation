@@ -179,7 +179,6 @@ class TripDetailPage(BasePage):
             "行程详情查看地图按钮",
             timeout=timeout,
         )
-        time.sleep(1.2)
 
     def tap_edit_trip(self, *, timeout: float = 8) -> None:
         """点击行程详情页底部“编辑行程”按钮。"""
@@ -190,18 +189,15 @@ class TripDetailPage(BasePage):
             timeout=timeout,
         )
         edit_button.click()
-        time.sleep(1.2)
 
     def wait_loaded(self, trip_name: str, *, timeout: float = 10) -> dict[str, object]:
         """等待我的行程详情页加载完成。"""
-        return {
-            "root": self.wait_xpath(self.ROOT_XPATH, "行程详情页根节点", timeout=timeout),
-            "title": self.wait_xpath(
-                self.route_trip_title_xpath(trip_name),
-                f"行程详情页标题{trip_name}",
-                timeout=timeout,
-            ),
-        }
+        title = self.wait_xpath(
+            self.title_xpath(trip_name),
+            f"行程详情页标题{trip_name}",
+            timeout=timeout,
+        )
+        return {"title": title}
 
     def wait_returned_from_play_mode(
         self,
@@ -399,7 +395,6 @@ class TripDetailPage(BasePage):
             timeout=timeout,
         )
         poi.click()
-        time.sleep(1)
 
     def wait_poi_detail_loaded(
         self,
@@ -408,17 +403,19 @@ class TripDetailPage(BasePage):
         timeout: float = 8,
     ) -> None:
         """等待行程详情内 POI 详情卡片展示首屏核心内容。"""
-        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
+        requirements = {
+            "root": (self.POI_DETAIL_ROOT_XPATH, "POI详情卡片"),
+            "tag": (self.POI_DETAIL_TAG_XPATH, "POI详情标签"),
+            "rating": (self.POI_DETAIL_RATING_XPATH, "POI详情评分"),
+            "gallery": (self.POI_DETAIL_GALLERY_XPATH, "POI详情图集"),
+            "intro": (self.POI_DETAIL_INTRO_XPATH, "POI详情简介"),
+        }
         if english_name is not None:
-            self.wait_xpath(
+            requirements["english_name"] = (
                 self.poi_detail_english_name_xpath(english_name),
                 f"POI英文名{english_name}",
-                timeout=timeout,
             )
-        self.wait_xpath(self.POI_DETAIL_TAG_XPATH, "POI详情标签", timeout=timeout)
-        self.wait_xpath(self.POI_DETAIL_RATING_XPATH, "POI详情评分", timeout=timeout)
-        self.wait_xpath(self.POI_DETAIL_GALLERY_XPATH, "POI详情图集", timeout=timeout)
-        self.wait_xpath(self.POI_DETAIL_INTRO_XPATH, "POI详情简介", timeout=timeout)
+        self.snapshot_xpaths(requirements, timeout=timeout)
 
     def swipe_poi_detail_up(self) -> None:
         """在 POI 详情半卡片内向下浏览。"""
@@ -536,7 +533,6 @@ class TripDetailPage(BasePage):
         """关闭 POI 详情并等待回到行程详情页。"""
         close_button = self.poi_detail_close_button(timeout=timeout)
         close_button.click()
-        time.sleep(0.8)
         self.wait_poi_detail_closed(timeout=timeout)
         self.wait_loaded(trip_name, timeout=timeout)
 
@@ -548,7 +544,6 @@ class TripDetailPage(BasePage):
     ) -> None:
         """通过系统侧滑关闭 POI 详情并返回行程详情页。"""
         self.driver.swipe_to_back(side="RIGHT")
-        time.sleep(0.8)
         self.wait_poi_detail_closed(timeout=timeout)
         self.wait_loaded(trip_name, timeout=timeout)
 
@@ -569,10 +564,14 @@ class TripDetailPage(BasePage):
 
     def wait_route_trip_detail(self, trip_name: str, *, timeout: float = 8) -> None:
         """Verify a route-created trip detail page exposes title and route data."""
-        self.wait_xpath(self.route_trip_title_xpath(trip_name), "route trip detail title", timeout=timeout)
-        self.wait_xpath(self.ROUTE_DAY_1_XPATH, "route trip day 1", timeout=timeout)
-        self.wait_xpath(self.ROUTE_DAY_2_XPATH, "route trip day 2", timeout=timeout)
-        self.wait_xpath(self.ROUTE_FIRST_POI_XPATH, "route trip first day POI", timeout=timeout)
+        ready_xpath = (
+            f'//*[@id="planPageRoot" '
+            f'and .//Text[{self._display_name_xpath_condition(trip_name)}] '
+            'and .//Text[@text="第 1 天" or @text="第1天" or @text="Day1"] '
+            'and .//Text[@text="第 2 天" or @text="第2天" or @text="Day2"] '
+            'and .//Text[@text="通菜街"]]'
+        )
+        self.wait_xpath(ready_xpath, "路线创建后的行程详情", timeout=timeout)
 
     def wait_generic_route_trip_detail(
         self,
@@ -582,22 +581,17 @@ class TripDetailPage(BasePage):
         timeout: float = 8,
     ) -> None:
         """等待任意路线创建的行程详情页展示标题和路线地点数据。"""
-        self.wait_xpath(
-            self.ROOT_XPATH,
-            "行程详情根节点",
-            timeout=timeout,
+        poi_condition = (
+            f'and .//Text[@text="{poi_name}" or contains(@text, "{poi_name}")] '
+            if poi_name is not None
+            else ""
         )
-        self.wait_xpath(
-            self.route_trip_title_xpath(trip_name),
-            "行程详情标题",
-            timeout=timeout,
+        ready_xpath = (
+            f'//*[@id="planPageRoot" '
+            f'and .//Text[{self._display_name_xpath_condition(trip_name)}] '
+            f'{poi_condition}]'
         )
-        if poi_name is not None:
-            self.wait_xpath(
-                self.route_poi_xpath(poi_name),
-                f"行程详情路线POI{poi_name}",
-                timeout=timeout,
-            )
+        self.wait_xpath(ready_xpath, "路线创建后的行程详情", timeout=timeout)
 
     def visible_texts(self) -> list[str]:
         """读取当前行程详情页暴露出的文本，用于诊断和报告附件。"""

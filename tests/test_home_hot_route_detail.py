@@ -39,13 +39,6 @@ def test_home_hot_route_detail_browsing(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            route_loaded["overview_title"],
-            "路线概览卡片",
-            timeout=8,
-            attach_crop=False,
-        )
 
     with allure.step("步骤2：向上向下拉动路线详情卡片，校验模块内容可滑动展示"):
         route_detail.scroll_to_warm_tips(max_swipes=8)

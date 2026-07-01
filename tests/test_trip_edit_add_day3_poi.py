@@ -67,8 +67,8 @@ def test_trip_edit_add_day3_and_poi(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        trip_edit.wait_loaded(timeout=12)
-        trip_edit.wait_tabs_loaded(timeout=8)
+        trip_edit.wait_ready(timeout=12)
+        trip_edit.wait_tabs_ready(timeout=8)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_edit.DAY_N_TAB_XPATH),

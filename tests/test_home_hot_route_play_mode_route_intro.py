@@ -28,7 +28,6 @@ def test_home_hot_route_play_mode_route_intro_reenter(driver) -> None:
             attach_crop=False,
         )
         route_detail.tap_one_click_play(timeout=12)
-        route_detail.wait_play_mode_overview(timeout=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.PLAY_MODE_ROUTE_INTRO_XPATH),
@@ -73,7 +72,6 @@ def test_home_hot_route_play_mode_route_intro_reenter(driver) -> None:
 
     with allure.step("步骤3：再次点击“一键跟玩”，进入游玩模式"):
         route_detail.tap_one_click_play(timeout=12)
-        route_detail.wait_play_mode_overview(timeout=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.PLAY_MODE_TAB_BAR_XPATH),

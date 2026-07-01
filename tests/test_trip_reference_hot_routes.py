@@ -18,6 +18,7 @@ def test_trip_reference_hot_routes_list_and_back(driver) -> None:
     with allure.step("前置条件：普通用户进入行程页"):
         navigation.tap_trip()
         trip_manager.wait_loaded(timeout=10)
+        trip_manager.scroll_to_create_area(max_swipes=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_manager.CREATE_TRIP_TITLE_XPATH),
@@ -74,6 +75,7 @@ def test_trip_reference_hot_routes_list_and_back(driver) -> None:
     with allure.step("步骤4：点击返回，回到行程页"):
         reference_routes.tap_back(timeout=8)
         trip_manager.wait_loaded(timeout=10)
+        trip_manager.scroll_to_create_area(max_swipes=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_manager.CREATE_TRIP_TITLE_XPATH),

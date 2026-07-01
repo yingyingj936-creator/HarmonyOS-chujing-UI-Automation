@@ -61,16 +61,17 @@ def test_trip_edit_page_tabs_switch_content(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        loaded = trip_edit.wait_loaded(timeout=12)
+        trip_edit.wait_ready(timeout=12)
+        tab_bar = trip_edit.wait_tabs_ready(timeout=8)
         attach_highlighted_bounds(
             driver,
-            loaded["tab_bar"].getBounds(),
+            tab_bar.getBounds(),
             "编辑行程页Tab栏",
         )
 
     with allure.step("步骤1：点击“Day1”Tab，校验卡片展示第1天地点和相邻距离"):
         day_1_tab = trip_edit.tap_day_1_tab(timeout=8)
-        day_1 = trip_edit.wait_day_1_loaded(timeout=10)
+        trip_edit.wait_day_1_content_ready(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             day_1_tab,
@@ -78,25 +79,10 @@ def test_trip_edit_page_tabs_switch_content(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        attach_highlighted_bounds(
-            driver,
-            day_1["list"].getBounds(),
-            "编辑行程页Day1地点列表",
-        )
-        attach_highlighted_bounds(
-            driver,
-            day_1["first_poi"].getBounds(),
-            "编辑行程页Day1地点-通菜街",
-        )
-        attach_highlighted_bounds(
-            driver,
-            day_1["distance"].getBounds(),
-            "编辑行程页Day1相邻距离",
-        )
 
     with allure.step("步骤2：点击“Day2”Tab，校验卡片展示第2天地点和相邻距离"):
         day_2_tab = trip_edit.tap_day_2_tab(timeout=8)
-        day_2 = trip_edit.wait_day_2_loaded(timeout=10)
+        trip_edit.wait_day_2_ready(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             day_2_tab,
@@ -104,25 +90,10 @@ def test_trip_edit_page_tabs_switch_content(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        attach_highlighted_bounds(
-            driver,
-            day_2["list"].getBounds(),
-            "编辑行程页Day2地点列表",
-        )
-        attach_highlighted_bounds(
-            driver,
-            day_2["first_poi"].getBounds(),
-            "编辑行程页Day2地点-铜锣湾",
-        )
-        attach_highlighted_bounds(
-            driver,
-            day_2["distance"].getBounds(),
-            "编辑行程页Day2相邻距离",
-        )
 
     with allure.step("步骤3：点击“待规划”Tab，校验展示待规划栏"):
         pending_tab = trip_edit.tap_pending_tab(timeout=8)
-        pending = trip_edit.wait_pending_loaded(timeout=10)
+        trip_edit.wait_pending_ready(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             pending_tab,
@@ -130,39 +101,14 @@ def test_trip_edit_page_tabs_switch_content(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        attach_highlighted_bounds(
-            driver,
-            pending["list"].getBounds(),
-            "编辑行程页待规划列表",
-        )
-        attach_highlighted_bounds(
-            driver,
-            pending["add"].getBounds(),
-            "编辑行程页待规划添加地点入口",
-        )
 
     with allure.step("步骤4：点击“全览”Tab，校验全览展示各天汇总路线"):
         overview_tab = trip_edit.tap_overview_tab(timeout=8)
-        overview = trip_edit.wait_route_overview_loaded(timeout=10)
+        trip_edit.wait_route_overview_ready(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             overview_tab,
             "编辑行程页Tab-全览",
             timeout=8,
             attach_crop=False,
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["list"].getBounds(),
-            "编辑行程页全览汇总路线列表",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["day_1"].getBounds(),
-            "编辑行程页全览-Day1汇总",
-        )
-        attach_highlighted_bounds(
-            driver,
-            overview["day_2"].getBounds(),
-            "编辑行程页全览-Day2汇总",
         )

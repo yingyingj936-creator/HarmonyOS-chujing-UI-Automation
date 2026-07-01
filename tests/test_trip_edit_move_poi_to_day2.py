@@ -114,7 +114,7 @@ def test_trip_edit_move_day1_poi_to_day2(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        trip_edit.wait_loaded(timeout=12)
+        trip_edit.wait_ready(timeout=12)
         trip_edit.tap_day_1_tab(timeout=8)
         target_poi = trip_edit.scroll_child_list_until_poi_visible(
             MOVE_POI,

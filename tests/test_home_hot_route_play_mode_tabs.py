@@ -40,7 +40,6 @@ def test_home_hot_route_play_mode_tabs_and_day_bubble(driver) -> None:
             attach_crop=False,
         )
         route_detail.tap_one_click_play(timeout=12)
-        route_detail.wait_play_mode_overview(timeout=12)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.PLAY_MODE_TAB_BAR_XPATH),

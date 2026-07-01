@@ -93,7 +93,10 @@ class TripManagerPage(BasePage):
         component = self._visible_xpath(xpath)
         if component is None:
             return None
-        navigation = self.find_xpath(self.SCREEN_ROOT_XPATH)
+        navigation = self.cached_xpath(
+            self.SCREEN_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if navigation is None:
             return component
         _, _, _, card_bottom = self._bounds_tuple(component)
@@ -353,21 +356,12 @@ class TripManagerPage(BasePage):
 
     def wait_edit_trip_menu_loaded(self, *, timeout: float = 8) -> None:
         """等待行程长按后的编辑菜单展示完整。"""
-        self.wait_xpath(
-            self.EDIT_TRIP_MENU_TITLE_XPATH,
-            "编辑行程菜单标题",
-            timeout=timeout,
+        ready_xpath = (
+            '//*[.//Text[@text="编辑行程"] '
+            'and .//Text[@text="置顶该行程"] '
+            'and .//Text[@text="删除该行程"]]'
         )
-        self.wait_xpath(
-            self.PIN_TRIP_ACTION_XPATH,
-            "置顶该行程操作",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.DELETE_TRIP_ACTION_XPATH,
-            "删除该行程操作",
-            timeout=timeout,
-        )
+        self.wait_xpath(ready_xpath, "编辑行程操作菜单", timeout=timeout)
 
     def tap_edit_menu_close(self, *, timeout: float = 8) -> None:
         """点击编辑行程底部菜单关闭按钮。"""

@@ -142,7 +142,7 @@ class NearbyPage(BasePage):
         """读取附近页左上角当前地区，避免固定写死目的地。"""
         deadline = time.time() + timeout
         while time.time() < deadline:
-            root = self.find_xpath(self.ROOT_XPATH)
+            root = self.cached_xpath(self.ROOT_XPATH, max_age_seconds=30)
             if root is None:
                 time.sleep(0.3)
                 continue
@@ -269,7 +269,7 @@ class NearbyPage(BasePage):
         components: Any,
     ) -> list[tuple[int, int, Any]]:
         """筛选附近页左侧分类栏内可点击区域，排除右侧列表、地图和底部导航。"""
-        root = self.find_xpath(self.ROOT_XPATH)
+        root = self.cached_xpath(self.ROOT_XPATH, max_age_seconds=30)
         if root is None:
             return []
 
@@ -304,7 +304,10 @@ class NearbyPage(BasePage):
 
     def _bottom_navigation_top(self) -> int:
         """读取底部导航顶部坐标，避免点击被导航栏遮挡的分类文本。"""
-        bottom_nav = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        bottom_nav = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if bottom_nav is None or not self._is_visible(bottom_nav):
             return 10**9
         return int(bottom_nav.getBounds().top)
@@ -317,7 +320,7 @@ class NearbyPage(BasePage):
 
     def _swipe_left_category_rail_up(self) -> None:
         """在左侧分类栏区域上滑，让较低的分类进入可见可点区域。"""
-        root = self.find_xpath(self.ROOT_XPATH)
+        root = self.cached_xpath(self.ROOT_XPATH, max_age_seconds=30)
         if root is None or not self._is_visible(root):
             self.driver.swipe("UP", distance=45, start_point=(0.18, 0.75), swipe_time=0.45)
             return
@@ -476,7 +479,6 @@ class NearbyPage(BasePage):
     def input_search_keyword(self, keyword: str, *, timeout: float = 8) -> None:
         """在附近页搜索弹层输入关键词，等待结果列表刷新。"""
         self.input_xpath(self.SEARCH_INPUT_XPATH, keyword, "附近页搜索输入框", timeout=timeout)
-        time.sleep(1)
 
     def wait_search_result_loaded(
         self,
@@ -486,17 +488,12 @@ class NearbyPage(BasePage):
         timeout: float = 8,
     ) -> None:
         """等待附近页搜索结果展示名称、类型、评分、详情和看附近。"""
-        self.wait_xpath(
-            self.search_result_text_xpath(poi_name),
-            f"附近页搜索结果-{poi_name}",
-            timeout=timeout,
+        ready_xpath = (
+            f'//*[.//Text[@text="{poi_name}"] '
+            f'and .//Text[@text="{poi_type}"] '
+            'and .//Text[starts-with(@text, "评分 ")]]'
         )
-        self.wait_xpath(
-            self.search_result_text_xpath(poi_type),
-            f"附近页搜索结果类型-{poi_type}",
-            timeout=timeout,
-        )
-        self.wait_xpath(self.SEARCH_RESULT_RATING_XPATH, "附近页搜索结果评分", timeout=timeout)
+        self.wait_xpath(ready_xpath, f"附近页搜索结果-{poi_name}", timeout=timeout)
         self.search_result_action_component(poi_name, "详情", timeout=timeout)
         self.search_result_action_component(poi_name, "看附近", timeout=timeout)
 

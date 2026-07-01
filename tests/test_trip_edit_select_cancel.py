@@ -61,9 +61,9 @@ def test_trip_edit_day1_poi_select_cancel(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        trip_edit.wait_loaded(timeout=12)
+        trip_edit.wait_ready(timeout=12)
         trip_edit.tap_day_1_tab(timeout=8)
-        trip_edit.wait_day_1_loaded(timeout=10)
+        trip_edit.wait_day_1_ready(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_edit.DAY_1_TAB_XPATH),
@@ -132,7 +132,7 @@ def test_trip_edit_day1_poi_select_cancel(driver) -> None:
         )
         trip_edit.tap_selection_cancel(timeout=8)
         trip_edit.wait_selection_action_menu_closed(timeout=8)
-        trip_edit.wait_day_1_loaded(timeout=10)
+        trip_edit.wait_day_1_ready(timeout=10)
         after_texts = trip_edit.visible_child_list_texts()
         assert after_texts == before_texts, (
             "点击取消后 Day1 行程列表发生变化，"

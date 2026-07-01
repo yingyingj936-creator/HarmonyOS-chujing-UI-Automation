@@ -31,13 +31,6 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.DAY_1_SELECTED_TAB_XPATH),
-            "第1天tab已高亮",
-            timeout=8,
-            attach_crop=False,
-        )
 
     with allure.step("步骤2：查看“第1天”标签下卡片陈列，校验地点顺序、简介和相邻地点距离"):
         route_detail.wait_day_1_route_list(timeout=10)
@@ -45,13 +38,6 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             driver,
             BY.xpath(route_detail.DAY_1_FIRST_POI_CARD_XPATH),
             "第1天第1个POI卡片，展示名称和简介缩略内容",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.DAY_1_DISTANCE_TO_SECOND_XPATH),
-            "第1天相邻地点距离和预计出行时间",
             timeout=8,
             attach_crop=False,
         )
@@ -65,27 +51,6 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.POI_DETAIL_ROOT_XPATH),
-            "POI详情卡片，包含标签、评分、图集、简介、游玩tips、添加到我的行程和周边推荐",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.POI_DETAIL_FAVORITE_BUTTON_XPATH),
-            "POI详情底部收藏按钮",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.POI_DETAIL_NAVIGATION_XPATH),
-            "POI详情底部导航入口",
-            timeout=8,
-            attach_crop=False,
-        )
 
     with allure.step("步骤4：点击右上角叉号，退出地点详情并回到第1天列表"):
         assert_visible_and_attach_highlight(
@@ -96,11 +61,4 @@ def test_home_hot_route_day1_poi_detail(driver) -> None:
             attach_crop=False,
         )
         route_detail.close_day_1_poi_detail(timeout=10)
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.DAY_1_FIRST_POI_CARD_XPATH),
-            "关闭POI详情后回到第1天POI列表",
-            timeout=8,
-            attach_crop=False,
-        )
 

@@ -8,9 +8,10 @@ import pytest
 from hypium import BY, UiDriver
 
 from core.settings import AppSettings, load_settings
-from pages.bottom_navigation import BottomNavigation
 from pages.outbound_home import OutboundHomePage
 from pages.select_destination import SelectDestinationPage
+from utils.allure_step_state import install_allure_step_tracking
+from utils.component_cache import invalidate_component_cache
 
 FILE_ORDER = {
     # Read-only display and browse cases run first to avoid account-state pollution.
@@ -113,6 +114,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    install_allure_step_tracking()
     config._app_settings = load_settings(
         config.getoption("--config"),
         target_device=config.getoption("--device"),
@@ -282,25 +284,74 @@ def driver(app_settings: AppSettings):
             print(f"[Device] 关闭 UiDriver 失败，可能是设备已断连：{exc}")
 
 
-def _return_to_home(driver, settings: AppSettings) -> bool:
+def _inspect_home_state(
+    driver,
+    settings: AppSettings,
+) -> tuple[bool, bool, object | None]:
+    """一次查询识别首页顶部、首页页面和底部首页入口。"""
+    home = OutboundHomePage(driver)
+    destination = settings.default_destination.replace('"', '\\"')
+    top_ready_xpath = (
+        '//*[@id="TabHomeCompRoot" '
+        f'and .//Row[.//Text[@text="{destination}"]]]'
+        '//*[@id="home_recommends_section"]'
+    )
+    selector = BY.xpath(
+        f"{top_ready_xpath} | {home.SEARCH_BAR_XPATH} | {home.BOTTOM_HOME_TAB_XPATH}"
+    )
+    components = driver.find_all_components(selector)
+    if components is None:
+        components = []
+    elif not isinstance(components, list):
+        components = [components]
+
+    top_ready = False
+    search_visible = False
+    home_tab = None
+    for component in components:
+        properties = component.getAllProperties().to_dict()
+        component_id = str(properties.get("id") or "")
+        text = (component.getText() or "").strip()
+        hint = str(properties.get("hint") or "")
+        if component_id == "home_recommends_section":
+            bounds = component.getBounds()
+            top_ready = (
+                int(bounds.right) > int(bounds.left)
+                and int(bounds.bottom) > int(bounds.top)
+                and int(bounds.bottom) > 0
+            )
+        elif text == "首页":
+            home_tab = component
+        elif "搜索服务" in text or "搜索服务" in hint:
+            search_visible = True
+
+    return top_ready, search_visible and home_tab is not None, home_tab
+
+
+def _return_to_home(
+    driver,
+    settings: AppSettings,
+    *,
+    initial_state: tuple[bool, bool, object | None] | None = None,
+) -> bool:
     """优先通过底部导航回首页，否则逐层返回。"""
     home = OutboundHomePage(driver)
-    navigation = BottomNavigation(driver)
+    state = initial_state
 
     for _ in range(settings.cleanup_back_steps):
-        if home.is_at_home():
+        if state is None:
+            state = _inspect_home_state(driver, settings)
+        _, on_home, home_tab = state
+        if on_home:
             return True
 
-        home_tab = driver.wait_for_component(
-            BY.xpath(home.BOTTOM_HOME_TAB_XPATH),
-            timeout=0.5,
-        )
         if home_tab is not None:
             try:
-                navigation.tap_home(timeout=2)
+                home_tab.click()
+                invalidate_component_cache(driver)
                 if (
                     driver.wait_for_component(
-                        BY.xpath(home.HOME_ROOT_XPATH),
+                        BY.xpath(home.SEARCH_BAR_XPATH),
                         timeout=3,
                     )
                     is not None
@@ -311,7 +362,9 @@ def _return_to_home(driver, settings: AppSettings) -> bool:
 
         try:
             driver.press_back()
+            invalidate_component_cache(driver)
             time.sleep(settings.cleanup_back_interval_seconds)
+            state = None
         except Exception:
             return False
 
@@ -328,19 +381,20 @@ def _restore_default_destination(
     destination_selector = BY.xpath(
         home.region_dropdown_xpath(settings.default_destination)
     )
-
-    if driver.wait_for_component(destination_selector, timeout=1) is not None:
+    current_destination_xpath = home.region_dropdown_xpath(
+        settings.default_destination
+    )
+    fallback_xpath = (
+        '//*[@id="TabHomeCompRoot"]//Text'
+        '[contains(@text, "香港") or contains(@text, "港澳")]'
+        if settings.default_destination == "中国香港"
+        else current_destination_xpath
+    )
+    current_components = driver.find_all_components(
+        BY.xpath(f"{current_destination_xpath} | {fallback_xpath}")
+    )
+    if current_components:
         return True, False
-    if settings.default_destination == "中国香港":
-        hong_kong_content = driver.wait_for_component(
-            BY.xpath(
-                '//*[@id="TabHomeCompRoot"]//Text'
-                '[contains(@text, "香港") or contains(@text, "港澳")]'
-            ),
-            timeout=1,
-        )
-        if hong_kong_content is not None:
-            return True, False
 
     try:
         home.tap_region_selector()
@@ -355,7 +409,10 @@ def _restore_default_destination(
 
 
 def _prepare_home(driver, settings: AppSettings) -> bool:
-    if not _return_to_home(driver, settings):
+    state = _inspect_home_state(driver, settings)
+    if state[0]:
+        return True
+    if not _return_to_home(driver, settings, initial_state=state):
         return False
     if not _restore_home_top(driver):
         return False
@@ -374,14 +431,6 @@ def _restore_home_top(driver) -> bool:
     """回到首页后统一恢复到顶部，避免上个用例的滚动位置污染金刚区/目的地用例。"""
     home = OutboundHomePage(driver)
     try:
-        if (
-            driver.wait_for_component(
-                BY.xpath(home.HOME_ROOT_XPATH),
-                timeout=3,
-            )
-            is None
-        ):
-            return False
         home.restore_top(max_swipes=18)
         return True
     except Exception:

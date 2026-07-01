@@ -6,6 +6,7 @@ from hypium import BY
 
 from pages.base_page import BasePage
 from utils.allure_visual import component_has_red_highlight
+from utils.component_cache import remember_component
 
 
 @dataclass(frozen=True)
@@ -140,29 +141,47 @@ class OutboundHomePage(BasePage):
         首页首屏加载判定（总超时）。
         用于“超过 5 秒为空白”的冒烟断言。
         """
-        deadline = time.time() + timeout
+        ready_xpath = (
+            '//*[@id="TabHomeCompRoot" '
+            f'and .//Text[@text="{destination}"] '
+            'and .//*[@text="搜索服务、地图、帖子" '
+            'or @hint="搜索服务、地图、帖子" '
+            'or contains(@text, "搜索服务") '
+            'or contains(@hint, "搜索服务")]]'
+        )
+        return self._wait_by_xpath(ready_xpath, timeout)
 
-        def remaining() -> float:
-            return max(0.1, deadline - time.time())
-
-        if not self._wait_by_xpath(self.HOME_ROOT_XPATH, remaining()):
-            return False
-        if not self._wait_by_text(destination, remaining()):
-            return False
-        if not self._wait_by_xpath(self.SEARCH_BAR_XPATH, remaining()):
-            return False
-        return True
+    def wait_key_modules_loaded(self, *, timeout: float = 8) -> Any:
+        """一次查询校验搜索框、金刚区、热门路线和瀑布流均已展示。"""
+        ready_xpath = (
+            '//*[@id="TabHomeCompRoot" '
+            'and .//*[@id="home_recommends_section"] '
+            'and .//*[@id="home_hot_routes_section"] '
+            'and .//*[@id="home_discovery_section"] '
+            'and .//*[@text="搜索服务、地图、帖子" '
+            'or @hint="搜索服务、地图、帖子" '
+            'or contains(@text, "搜索服务") '
+            'or contains(@hint, "搜索服务")]]'
+        )
+        return self.wait_xpath(ready_xpath, "首页关键模块", timeout=timeout)
 
     def is_home_tab_active(self, timeout: float = 3) -> bool:
         """
         首页高亮判定（代理断言）。
         说明：UI 树中未提供 selected=true，可通过“首页专属容器+首屏模块可见”推断当前为首页激活态。
         """
-        return (
-            self._wait_by_xpath(self.HOME_ROOT_XPATH, timeout)
-            and self._wait_by_xpath(self.BOTTOM_HOME_TAB_XPATH, timeout)
-            and self._wait_by_xpath(self.HOT_ROUTES_SECTION_XPATH, timeout)
-        )
+        try:
+            self.snapshot_xpaths(
+                {
+                    "root": (self.HOME_ROOT_XPATH, "首页根节点"),
+                    "home_tab": (self.BOTTOM_HOME_TAB_XPATH, "底部首页页签"),
+                    "hot_routes": (self.HOT_ROUTES_SECTION_XPATH, "首页热门路线"),
+                },
+                timeout=timeout,
+            )
+            return True
+        except RuntimeError:
+            return False
 
     def tap_region_selector(self, region_text: str | None = None) -> None:
         """点击首页地区切换下拉按钮。"""
@@ -538,6 +557,11 @@ class OutboundHomePage(BasePage):
         for component in components:
             post_id = self._component_id(component)
             if post_id:
+                remember_component(
+                    self.driver,
+                    BY.xpath(self.guide_cover_xpath(post_id)),
+                    component,
+                )
                 post_ids.append(post_id)
         if len(post_ids) != len(set(post_ids)):
             raise RuntimeError(f"[{self.PAGE_NAME}] 当前瀑布流出现重复帖子 ID")
@@ -548,8 +572,11 @@ class OutboundHomePage(BasePage):
         components = self.driver.find_all_components(
             BY.xpath(self.WATERFALL_COVER_XPATH)
         )
-        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        categories = self.cached_xpath(self.CATEGORY_LIST_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if components is None or categories is None or navigation is None:
             return ()
         if not isinstance(components, list):
@@ -644,7 +671,10 @@ class OutboundHomePage(BasePage):
     def is_guide_card_above_bottom_navigation(self, post_id: str) -> bool:
         """判断攻略卡片是否完整位于底部导航上方。"""
         card = self.find_xpath(self.guide_card_xpath(post_id))
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if card is None or navigation is None:
             return False
         return int(card.getBounds().bottom) <= int(navigation.getBounds().top)
@@ -666,47 +696,30 @@ class OutboundHomePage(BasePage):
 
     def guide_card_fields(self, post_id: str) -> HomeGuideCard:
         """读取指定攻略卡片的标题、作者、目的地和点赞数。"""
-        self.wait_xpath(self.guide_cover_xpath(post_id), "攻略封面")
-        try:
-            title = self.wait_xpath(
-                self.guide_title_xpath(post_id),
-                "攻略标题",
-            ).getText().strip()
-            author = self.wait_xpath(
-                self.guide_author_xpath(post_id),
-                "攻略作者",
-            ).getText().strip()
-            destination = self.wait_xpath(
-                self.guide_destination_xpath(post_id),
-                "攻略目的地",
-            ).getText().strip()
-            likes = self.wait_xpath(
-                self.guide_likes_xpath(post_id),
-                "攻略点赞数",
-            ).getText().strip()
-        except RuntimeError:
-            texts = self._guide_card_texts(post_id)
-            if len(texts) < 4:
-                raise RuntimeError(
-                    f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 文案字段不足：{texts}"
-                )
-
-            likes_index = next(
-                (
-                    index
-                    for index in range(len(texts) - 1, -1, -1)
-                    if texts[index].replace(",", "").isdigit()
-                ),
-                -1,
+        if self.cached_xpath(self.guide_cover_xpath(post_id)) is None:
+            raise RuntimeError(f"[{self.PAGE_NAME}] 未找到攻略封面：{post_id}")
+        texts = self._guide_card_texts(post_id)
+        if len(texts) < 4:
+            raise RuntimeError(
+                f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 文案字段不足：{texts}"
             )
-            if likes_index <= 1:
-                raise RuntimeError(
-                    f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 未找到点赞数字段：{texts}"
-                )
-            title = texts[0]
-            author = texts[1]
-            destination = texts[likes_index - 1]
-            likes = texts[likes_index]
+
+        likes_index = next(
+            (
+                index
+                for index in range(len(texts) - 1, -1, -1)
+                if texts[index].replace(",", "").isdigit()
+            ),
+            -1,
+        )
+        if likes_index <= 1:
+            raise RuntimeError(
+                f"[{self.PAGE_NAME}] 攻略卡片 {post_id} 未找到点赞数字段：{texts}"
+            )
+        title = texts[0]
+        author = texts[1]
+        destination = texts[likes_index - 1]
+        likes = texts[likes_index]
         return HomeGuideCard(
             post_id=post_id,
             title=title,
@@ -800,20 +813,23 @@ class OutboundHomePage(BasePage):
 
     def tap_guide_card(self, post_id: str) -> None:
         """点击攻略封面或标题中心，避免卡片内点赞按钮截获点击。"""
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         bottom_limit = (
             int(navigation.getBounds().top)
             if navigation is not None
             else 10_000
         )
-        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
+        categories = self.cached_xpath(self.CATEGORY_LIST_XPATH)
         top_limit = (
             int(categories.getBounds().bottom) + 8
             if categories is not None
             else 0
         )
         for xpath in (self.guide_cover_xpath(post_id), self.guide_title_xpath(post_id)):
-            component = self.find_xpath(xpath)
+            component = self.cached_xpath(xpath)
             if component is not None and self._is_component_center_visible(
                 component,
                 bottom_limit=bottom_limit,
@@ -857,7 +873,10 @@ class OutboundHomePage(BasePage):
 
     def is_guide_like_control_visible(self, post_id: str) -> bool:
         like_row = self.find_xpath(self.guide_like_row_xpath(post_id))
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if like_row is None or navigation is None:
             return False
         bounds = like_row.getBounds()
@@ -868,10 +887,13 @@ class OutboundHomePage(BasePage):
 
     def is_guide_card_fully_visible(self, post_id: str) -> bool:
         """判断卡片封面和信息区均处于分类栏与底部导航之间。"""
-        card = self.find_xpath(self.guide_card_xpath(post_id))
-        cover = self.find_xpath(self.guide_cover_xpath(post_id))
-        categories = self.find_xpath(self.CATEGORY_LIST_XPATH)
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        card = self.cached_xpath(self.guide_card_xpath(post_id))
+        cover = self.cached_xpath(self.guide_cover_xpath(post_id))
+        categories = self.cached_xpath(self.CATEGORY_LIST_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if any(
             component is None
             for component in (card, cover, categories, navigation)
@@ -889,12 +911,15 @@ class OutboundHomePage(BasePage):
 
     def is_guide_card_safely_clickable(self, post_id: str) -> bool:
         """判断攻略卡片当前有可点击区域未被底部导航遮挡。"""
-        navigation = self.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        navigation = self.cached_xpath(
+            self.BOTTOM_NAV_ROOT_XPATH,
+            max_age_seconds=30,
+        )
         if navigation is None:
             return False
         bottom_limit = int(navigation.getBounds().top)
         for xpath in (self.guide_cover_xpath(post_id), self.guide_title_xpath(post_id)):
-            component = self.find_xpath(xpath)
+            component = self.cached_xpath(xpath)
             if component is not None and self._is_component_center_visible(
                 component,
                 bottom_limit=bottom_limit,
@@ -1040,17 +1065,26 @@ class OutboundHomePage(BasePage):
     def restore_top(self, *, max_swipes: int = 12) -> None:
         """测试结束后将首页恢复到顶部，避免污染后续用例。"""
         # 搜索框和攻略分类栏会吸顶，不能作为“已回到顶部”的依据。
-        for _ in range(max_swipes + 1):
+        def top_module_visible() -> bool:
             top_module = self.find_xpath(self.HOME_RECOMMENDS_SECTION_XPATH)
-            if top_module is not None:
-                bounds = top_module.getBounds()
-                if (
-                    int(bounds.right) > int(bounds.left)
-                    and int(bounds.bottom) > int(bounds.top)
-                    and int(bounds.bottom) > 0
-                ):
-                    return
+            if top_module is None:
+                return False
+            bounds = top_module.getBounds()
+            return (
+                int(bounds.right) > int(bounds.left)
+                and int(bounds.bottom) > int(bounds.top)
+                and int(bounds.bottom) > 0
+            )
+
+        if top_module_visible():
+            return
+
+        # 连续下滑三次再检查，避免长瀑布流回顶时每次手势都 dump UI 树。
+        for swipe_index in range(max_swipes):
             self._swipe_home_down()
+            if (swipe_index + 1) % 3 == 0 or swipe_index + 1 == max_swipes:
+                if top_module_visible():
+                    return
         raise RuntimeError(f"[{self.PAGE_NAME}] 无法将首页恢复到顶部")
 
     def _swipe_home_down(self) -> None:

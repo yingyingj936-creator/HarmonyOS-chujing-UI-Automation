@@ -126,7 +126,7 @@ def test_trip_edit_reorder_day2_first_poi_below_second(driver) -> None:
             "行程详情页底部编辑行程按钮",
         )
         edit_button.click()
-        trip_edit.wait_loaded(timeout=12)
+        trip_edit.wait_ready(timeout=12)
         trip_edit.tap_day_2_tab(timeout=8)
         trip_edit.wait_day_2_loaded(timeout=10)
 

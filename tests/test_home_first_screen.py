@@ -31,42 +31,16 @@ def test_home_first_screen_load_and_modules(driver) -> None:
         )
 
     with allure.step("步骤3：校验搜索框、金刚区、热门路线、瀑布流展示"):
+        home.wait_key_modules_loaded(timeout=5)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(home.SEARCH_BAR_XPATH),
             "搜索框",
             timeout=5,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(home.KINGKONG_PROXY_XPATH),
-            "金刚区（代理容器）",
-            timeout=5,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(home.HOT_ROUTES_SECTION_XPATH),
-            "热门路线模块",
-            timeout=5,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(home.WATERFALL_SECTION_XPATH),
-            "瀑布流模块",
-            timeout=5,
-        )
 
     with allure.step("步骤4：校验底部导航完整且首页处于激活态"):
+        assert home.is_home_tab_active(timeout=5), "首页未处于激活态"
         assert_visible_and_attach_highlight(
             driver, BY.xpath(home.BOTTOM_HOME_TAB_XPATH), "底部导航-首页", timeout=5
         )
-        assert_visible_and_attach_highlight(
-            driver, BY.xpath(home.BOTTOM_TRIP_TAB_XPATH), "底部导航-行程", timeout=5
-        )
-        assert_visible_and_attach_highlight(
-            driver, BY.xpath(home.BOTTOM_NEARBY_TAB_XPATH), "底部导航-附近", timeout=5
-        )
-        assert_visible_and_attach_highlight(
-            driver, BY.xpath(home.BOTTOM_MINE_TAB_XPATH), "底部导航-我的", timeout=5
-        )
-        assert home.is_home_tab_active(timeout=5), "首页未处于激活态"

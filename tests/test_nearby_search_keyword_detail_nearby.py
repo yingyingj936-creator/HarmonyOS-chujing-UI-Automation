@@ -82,20 +82,6 @@ def test_nearby_search_keyword_detail_and_nearby(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(nearby.search_result_text_xpath(POI_TYPE)),
-            f"搜索结果类型-{POI_TYPE}",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(nearby.SEARCH_RESULT_RATING_XPATH),
-            "搜索结果评分",
-            timeout=8,
-            attach_crop=False,
-        )
         detail_button = nearby.search_result_action_component(POI_NAME, "详情", timeout=8)
         attach_highlighted_bounds(driver, detail_button.getBounds(), "搜索结果-详情按钮")
         nearby_button = nearby.search_result_action_component(POI_NAME, "看附近", timeout=8)

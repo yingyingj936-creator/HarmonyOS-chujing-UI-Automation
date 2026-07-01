@@ -23,11 +23,6 @@ def test_home_hot_route_overview_day_card_to_day_view(driver) -> None:
 
     with allure.step("步骤1：查看“全览”标签下地图背景，校验全览标签已默认选中"):
         route_detail.wait_itinerary_tabs(timeout=10)
-        route_detail.wait_xpath(
-            route_detail.OVERVIEW_SELECTED_TAB_XPATH,
-            "全览标签选中态",
-            timeout=10,
-        )
         assert_visible_and_attach_highlight(
             driver,
             route_loaded["map"],
@@ -52,13 +47,6 @@ def test_home_hot_route_overview_day_card_to_day_view(driver) -> None:
             driver,
             BY.xpath(route_detail.DAY_1_SELECTED_TAB_XPATH),
             "点击全览第1天卡片后，第1天标签已高亮",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.MAP_VIEW_XPATH),
-            "第1天视图地图背景",
             timeout=8,
             attach_crop=False,
         )

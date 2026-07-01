@@ -39,46 +39,10 @@ def test_home_hot_route_one_click_play_mode(driver) -> None:
         route_detail.tap_one_click_play(timeout=10)
 
     with allure.step("步骤2：查看游玩模式全览视图和关键控件"):
-        route_detail.wait_play_mode_overview(timeout=10)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(route_detail.MAP_VIEW_XPATH),
             "游玩模式地图全览",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.PLAY_MODE_TAB_BAR_XPATH),
-            "游玩模式全览-第1天-第2天标签",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.PLAY_MODE_LEFT_SIDEBAR_XPATH),
-            "游玩模式左下角侧边栏",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.PLAY_MODE_EDIT_ROUTE_XPATH),
-            "游玩模式编辑路线入口",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.PLAY_MODE_ROUTE_INTRO_XPATH),
-            "游玩模式路线介绍入口",
-            timeout=8,
-            attach_crop=False,
-        )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(route_detail.PLAY_MODE_LOCATION_BUTTON_XPATH),
-            "游玩模式定位按钮",
             timeout=8,
             attach_crop=False,
         )

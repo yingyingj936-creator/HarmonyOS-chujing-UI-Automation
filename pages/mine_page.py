@@ -10,7 +10,6 @@ class MinePage(BasePage):
     """出境服务“我的”页面对象。"""
 
     PAGE_NAME = "MinePage"
-    LOADING_XPATH = '//Text[@text="加载中..."]'
     PROFILE_TITLE_XPATH = '//Text[@text="小星星的旅程"]'
     RECENT_SERVICES_TITLE_XPATH = '//Text[@text="最近使用"]'
     RECENT_SERVICES_GRID_XPATH = (
@@ -33,10 +32,6 @@ class MinePage(BasePage):
         '//Row[./Text[contains(@text, "帖子")]]'
     )
     FAVORITE_POSTS_TEXT_XPATH = '//Text[contains(@text, "帖子")]'
-    CONTENT_STATE_TEXT_XPATH = (
-        '//Text[@text="加载中..." or @text="小星星的旅程" or @text="收藏" '
-        'or contains(@text, "帖子")]'
-    )
     PAGE_SCROLL_XPATH = '//List[@scrollable="true"]'
     MINE_ENTRY_NAMES = (
         "我的订单",
@@ -162,42 +157,42 @@ class MinePage(BasePage):
 
     def wait_content_loaded(self, *, timeout: float = 25) -> None:
         """等待“我的”页从 loading 态切到真实内容，避免过早查找收藏标签。"""
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            components = self.driver.find_all_components(
-                BY.xpath(self.CONTENT_STATE_TEXT_XPATH)
-            )
-            texts = {
-                (component.getText() or "").strip()
-                for component in self._as_list(components)
-            }
-            has_content = (
-                "小星星的旅程" in texts
-                or "收藏" in texts
-                or any("帖子" in text for text in texts)
-            )
-            if "加载中..." not in texts and has_content:
-                return
-            time.sleep(0.5)
-
-        raise RuntimeError(f"[{self.PAGE_NAME}] 我的页内容加载超时")
+        component = self.driver.wait_for_component(
+            BY.text("小星星的旅程"),
+            timeout=timeout,
+        )
+        if component is None:
+            raise RuntimeError(f"[{self.PAGE_NAME}] 我的页内容加载超时")
 
     def wait_layout_loaded(self, *, timeout: float = 15) -> None:
         """校验“我的”页关键布局已渲染。"""
-        self.wait_content_loaded(timeout=timeout)
-        self.wait_xpath(self.PROFILE_TITLE_XPATH, "我的页昵称", timeout=timeout)
-        for entry_name in self.MINE_ENTRY_NAMES:
-            self.wait_xpath(
-                self.mine_entry_xpath(entry_name),
-                f"我的页入口“{entry_name}”",
-                timeout=timeout,
-            )
-        self.wait_xpath(self.RECENT_SERVICES_TITLE_XPATH, "最近使用标题", timeout=timeout)
-        self.wait_xpath(self.FAVORITES_TITLE_XPATH, "收藏标题", timeout=timeout)
+        requirements = {
+            "profile": (self.PROFILE_TITLE_XPATH, "我的页昵称"),
+            "recent": (self.RECENT_SERVICES_TITLE_XPATH, "我的页最近使用"),
+            "favorites": (self.FAVORITES_TITLE_XPATH, "我的页收藏区域"),
+        }
+        requirements.update(
+            {
+                f"entry_{index}": (
+                    self.mine_entry_xpath(entry_name),
+                    f"我的页入口{entry_name}",
+                )
+                for index, entry_name in enumerate(self.MINE_ENTRY_NAMES)
+            }
+        )
+        self.snapshot_xpaths(requirements, timeout=timeout)
+
+    def wait_favorites_tabs_loaded(self, *, timeout: float = 8) -> None:
+        """一次查询校验收藏标题、地点 Tab 和帖子 Tab。"""
+        ready_xpath = (
+            '//*[.//Text[@text="收藏"] '
+            'and .//Row[./Text[contains(@text, "地点")]] '
+            'and .//Row[./Text[contains(@text, "帖子")]]]'
+        )
+        self.wait_xpath(ready_xpath, "我的页收藏区域", timeout=timeout)
 
     def ensure_entry_area_visible(self, *, max_swipes: int = 5) -> None:
         """回到“我的”页顶部入口区域，避免前序收藏区域滚动影响入口点击。"""
-        self.wait_content_loaded()
         for swipe_count in range(max_swipes + 1):
             if self.find_xpath(self.mine_entry_xpath("我的订单")) is not None:
                 return
@@ -231,17 +226,12 @@ class MinePage(BasePage):
 
     def wait_feedback_loaded(self, *, timeout: float = 12) -> None:
         """等待帮助与反馈页加载完成。"""
-        self.wait_xpath(self.FEEDBACK_TITLE_XPATH, "帮助与反馈标题", timeout=timeout)
-        self.wait_xpath(
-            self.FEEDBACK_INITIAL_CATEGORY_XPATH,
-            "帮助与反馈默认分类",
-            timeout=timeout,
+        ready_xpath = (
+            '//*[.//*[@text="帮助与反馈"] '
+            'and .//*[@text="桌面卡片"] '
+            'and .//*[@text="问题反馈"]]'
         )
-        self.wait_xpath(
-            self.FEEDBACK_PROBLEM_BUTTON_XPATH,
-            "问题反馈入口",
-            timeout=timeout,
-        )
+        self.wait_xpath(ready_xpath, "帮助与反馈页核心内容", timeout=timeout)
 
     def tap_feedback_category(
         self,
@@ -281,21 +271,14 @@ class MinePage(BasePage):
 
     def wait_problem_feedback_loaded(self, *, timeout: float = 12) -> None:
         """等待问题反馈表单加载完成。"""
-        self.wait_xpath(
-            self.PROBLEM_FEEDBACK_SERVICE_XPATH,
-            "问题反馈-选择服务",
-            timeout=timeout,
+        ready_xpath = (
+            '//*[.//*[@text="选择服务（必选）"] '
+            'and .//*[@text="问题描述（必选）"]]'
         )
-        self.wait_xpath(
-            self.PROBLEM_FEEDBACK_DESC_XPATH,
-            "问题反馈-问题描述",
-            timeout=timeout,
-        )
+        self.wait_xpath(ready_xpath, "问题反馈表单", timeout=timeout)
 
     def wait_recent_services_visible(self, *, timeout: float = 10) -> tuple[str, ...]:
         """等待最近使用区域展示，并返回当前可见服务名称。"""
-        self.wait_content_loaded()
-        self.wait_xpath(self.RECENT_SERVICES_TITLE_XPATH, "最近使用标题", timeout=timeout)
         self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "最近使用服务列表", timeout=timeout)
 
         deadline = time.monotonic() + timeout
@@ -426,12 +409,8 @@ class MinePage(BasePage):
 
     def scroll_favorites_area_into_view(self, *, max_swipes: int = 6) -> None:
         """滚动“我的”页面，直到收藏区域进入可见区域。"""
-        self.wait_content_loaded()
         for swipe_count in range(max_swipes + 1):
-            if self.driver.wait_for_component(
-                BY.xpath(self.FAVORITES_TITLE_XPATH),
-                timeout=1,
-            ) is not None:
+            if self.find_xpath(self.FAVORITES_TITLE_XPATH) is not None:
                 return
             if swipe_count == max_swipes:
                 break
@@ -458,7 +437,6 @@ class MinePage(BasePage):
 
     def tap_favorite_posts_tab(self) -> None:
         """点击收藏区域的“帖子”页签。"""
-        self.wait_content_loaded()
         self.scroll_favorites_area_into_view()
         page_scroll = self.wait_xpath(
             self.PAGE_SCROLL_XPATH,
@@ -713,7 +691,6 @@ class MinePage(BasePage):
 
     def restore_favorites_default_state(self) -> None:
         """恢复收藏默认地点页并回到“我的”页顶部，避免污染后续用例。"""
-        self.wait_content_loaded(timeout=12)
         self.scroll_favorites_area_into_view(max_swipes=8)
         self.clear_favorite_search()
         self.tap_favorite_places_tab()
@@ -734,7 +711,7 @@ class MinePage(BasePage):
         )
 
         for _ in range(max_swipes + 1):
-            if self.driver.wait_for_component(selector, timeout=1) is not None:
+            if self.driver.find_component(selector) is not None:
                 return
             self.driver.swipe(
                 "UP",
@@ -795,7 +772,7 @@ class MinePage(BasePage):
         )
 
         for _ in range(max_swipes + 1):
-            if self.driver.wait_for_component(selector, timeout=1) is not None:
+            if self.driver.find_component(selector) is not None:
                 return
             self.driver.swipe(
                 "UP",

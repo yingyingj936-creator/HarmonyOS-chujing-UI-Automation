@@ -58,13 +58,13 @@ class ReferenceHotRoutesPage(BasePage):
 
     def wait_loaded(self, *, timeout: float = 8) -> None:
         """等待参考热门路线页加载完成。"""
-        self.wait_xpath(
-            self.CURRENT_REGION_XPATH,
-            f"当前地区{self.CURRENT_REGION_TEXT}",
-            timeout=timeout,
+        ready_xpath = (
+            '//*[.//Text[@text="中国香港" or @text="香港" '
+            'or contains(@text, "香港")] '
+            'and .//List[@scrollable="true"]//Text'
+            '[contains(@text, "游") or contains(@text, "路线")]]'
         )
-        self.wait_xpath(self.ROUTE_LIST_XPATH, "参考热门路线列表", timeout=timeout)
-        self.wait_xpath(self.HOT_ROUTE_TITLE_XPATH, "热门路线标题", timeout=timeout)
+        self.wait_xpath(ready_xpath, "参考热门路线页核心内容", timeout=timeout)
 
     def wait_hot_route_card(self, *, timeout: float = 8) -> None:
         """等待至少一张热门路线卡片展示。"""
