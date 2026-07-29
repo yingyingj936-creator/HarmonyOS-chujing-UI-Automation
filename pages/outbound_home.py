@@ -7,6 +7,7 @@ from hypium import BY
 from pages.base_page import BasePage
 from utils.allure_visual import component_has_red_highlight
 from utils.component_cache import remember_component
+from utils.ui_snapshot import UiSnapshot
 
 
 @dataclass(frozen=True)
@@ -40,12 +41,21 @@ class OutboundHomePage(BasePage):
     )
     HOME_ROOT_XPATH = '//*[@id="TabHomeCompRoot"]'
     SEARCH_BAR_TEXT = "搜索服务、地图、帖子"
-    SEARCH_BAR_XPATH = (
+    SEARCH_BAR_LEGACY_XPATH = (
         '//*[@id="TabHomeCompRoot"]//*['
         '@text="搜索服务、地图、帖子" '
         'or @hint="搜索服务、地图、帖子" '
         'or contains(@text, "搜索服务") '
         'or contains(@hint, "搜索服务")]'
+    )
+    SEARCH_BAR_AI_RECOMMEND_XPATH = (
+        '//*[@id="TabHomeCompRoot"]//Row[@clickable="true" '
+        'and .//Swiper//Text '
+        'and .//Image '
+        'and following::*[@id="home_recommends_section"]]'
+    )
+    SEARCH_BAR_XPATH = (
+        f'{SEARCH_BAR_LEGACY_XPATH} | {SEARCH_BAR_AI_RECOMMEND_XPATH}'
     )
     HOME_RECOMMENDS_SECTION_XPATH = '//*[@id="home_recommends_section"]'
     # 金刚区使用业务容器定位，避免依赖首屏 Stack 层级。
@@ -144,10 +154,12 @@ class OutboundHomePage(BasePage):
         ready_xpath = (
             '//*[@id="TabHomeCompRoot" '
             f'and .//Text[@text="{destination}"] '
-            'and .//*[@text="搜索服务、地图、帖子" '
+            'and .//*[@id="home_recommends_section"] '
+            'and (.//*[@text="搜索服务、地图、帖子" '
             'or @hint="搜索服务、地图、帖子" '
             'or contains(@text, "搜索服务") '
-            'or contains(@hint, "搜索服务")]]'
+            'or contains(@hint, "搜索服务")] '
+            'or .//Row[@clickable="true" and .//Swiper//Text and .//Image])]'
         )
         return self._wait_by_xpath(ready_xpath, timeout)
 
@@ -158,10 +170,11 @@ class OutboundHomePage(BasePage):
             'and .//*[@id="home_recommends_section"] '
             'and .//*[@id="home_hot_routes_section"] '
             'and .//*[@id="home_discovery_section"] '
-            'and .//*[@text="搜索服务、地图、帖子" '
+            'and (.//*[@text="搜索服务、地图、帖子" '
             'or @hint="搜索服务、地图、帖子" '
             'or contains(@text, "搜索服务") '
-            'or contains(@hint, "搜索服务")]]'
+            'or contains(@hint, "搜索服务")] '
+            'or .//Row[@clickable="true" and .//Swiper//Text and .//Image])]'
         )
         return self.wait_xpath(ready_xpath, "首页关键模块", timeout=timeout)
 
@@ -368,7 +381,12 @@ class OutboundHomePage(BasePage):
 
     def tap_hot_route_card(self, route_name: str) -> None:
         """点击首页热门路线中的指定卡片。"""
-        component = self.ensure_hot_route_visible(route_name)
+        title = self.ensure_hot_route_visible(route_name)
+        card = self.driver.wait_for_component(
+            BY.xpath(self.hot_route_card_xpath(route_name)),
+            timeout=2,
+        )
+        component = card if card is not None else title
         bounds = component.getBounds()
         self.driver.click(
             (
@@ -569,14 +587,10 @@ class OutboundHomePage(BasePage):
 
     def visible_full_guide_post_ids(self) -> tuple[str, ...]:
         """一次性读取当前屏幕内完整可见的攻略帖子 ID，减少 UI dump 次数。"""
-        components = self.driver.find_all_components(
-            BY.xpath(self.WATERFALL_COVER_XPATH)
-        )
-        categories = self.cached_xpath(self.CATEGORY_LIST_XPATH)
-        navigation = self.cached_xpath(
-            self.BOTTOM_NAV_ROOT_XPATH,
-            max_age_seconds=30,
-        )
+        snapshot = UiSnapshot(self.driver).capture()
+        components = snapshot.find_all_xpath(self.WATERFALL_COVER_XPATH)
+        categories = snapshot.find_xpath(self.CATEGORY_LIST_XPATH)
+        navigation = snapshot.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
         if components is None or categories is None or navigation is None:
             return ()
         if not isinstance(components, list):
@@ -869,6 +883,43 @@ class OutboundHomePage(BasePage):
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 攻略 {post_id} 点赞数未变为 {expected}，"
             f"最后读取={last_count}"
+        )
+
+    def wait_guide_like_state(
+        self,
+        post_id: str,
+        *,
+        expected_count: int,
+        expected_liked: bool,
+        timeout: float = 20,
+        stable_rounds: int = 2,
+    ) -> tuple[int, bool]:
+        """等待首页攻略点赞数量和红心状态都达到预期，并连续稳定数轮。"""
+        deadline = time.monotonic() + timeout
+        matched_rounds = 0
+        latest: tuple[int | None, bool | None] = (None, None)
+
+        while time.monotonic() < deadline:
+            try:
+                count = self.guide_like_count(post_id)
+                liked = self.is_guide_liked(post_id)
+            except RuntimeError:
+                time.sleep(0.5)
+                continue
+
+            latest = (count, liked)
+            if count == expected_count and liked is expected_liked:
+                matched_rounds += 1
+                if matched_rounds >= stable_rounds:
+                    return count, liked
+            else:
+                matched_rounds = 0
+            time.sleep(0.8)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 攻略 {post_id} 点赞状态未稳定到预期："
+            f"期望数量={expected_count}，期望高亮={expected_liked}，"
+            f"最后读取={latest}"
         )
 
     def is_guide_like_control_visible(self, post_id: str) -> bool:

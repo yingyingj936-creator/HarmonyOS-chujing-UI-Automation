@@ -6,6 +6,7 @@ __pycache__/
 
 reports/
 tmp_hypium/
+tmp_pycache_check/
 allure-report/
 
 *.log

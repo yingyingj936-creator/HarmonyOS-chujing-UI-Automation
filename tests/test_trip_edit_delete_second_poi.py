@@ -185,7 +185,7 @@ def test_trip_edit_day1_delete_second_poi(driver) -> None:
             complete.getBounds(),
             "编辑行程页编辑完成按钮",
         )
-        complete.click()
+        trip_edit.tap_edit_complete(timeout=10)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
 
         day_1 = trip_detail.scroll_until_xpath_visible(

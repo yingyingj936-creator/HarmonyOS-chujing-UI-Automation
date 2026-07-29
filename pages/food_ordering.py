@@ -32,9 +32,7 @@ class FoodOrderingPage(BasePage):
         '//Tabs//List[@scrollable="true" and .//Text[@text="海鲜"]]'
     )
     SELECTED_BACKGROUND = "#E6000000"
-    LIGE_ROW_XPATH = (
-        '//Tabs//Row[@clickable="true" and ./Column/Text[@text="立哥"]]'
-    )
+    YIXI_CART_NOODLE_NAME = "一喜車仔麵"
 
     @classmethod
     def order_row_xpath(cls, service_name: str) -> str:
@@ -184,9 +182,57 @@ class FoodOrderingPage(BasePage):
             reason = "商户列表未相对上一分类刷新"
         raise RuntimeError(f"[{self.PAGE_NAME}] {reason}")
 
-    def tap_lige(self) -> None:
-        """点击快餐分类中的“立哥”商户。"""
-        self.tap_xpath(self.LIGE_ROW_XPATH, "快餐商户“立哥”")
+    def ensure_order_visible(
+        self,
+        service_name: str,
+        *,
+        timeout: float = 8,
+        max_swipes: int = 5,
+    ) -> object:
+        """在当前点餐分类列表中滚动查找指定商户。"""
+        deadline = time.time() + timeout
+        row_xpath = self.order_row_xpath(service_name)
+
+        for swipe_count in range(max_swipes + 1):
+            component = self.find_xpath(row_xpath)
+            if component is not None:
+                return component
+            if swipe_count == max_swipes or time.time() >= deadline:
+                break
+
+            content_area = self.find_xpath(self.ORDER_CONTENT_XPATH)
+            if content_area is not None:
+                self.driver.swipe(
+                    "UP",
+                    distance=55,
+                    area=content_area,
+                    swipe_time=0.5,
+                )
+            else:
+                self.driver.swipe(
+                    "UP",
+                    distance=55,
+                    start_point=(0.5, 0.72),
+                    swipe_time=0.5,
+                )
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 当前分类未找到商户“{service_name}”"
+        )
+
+    def tap_order_by_name(self, service_name: str) -> str:
+        """点击当前分类中的指定商户，并返回商户名称。"""
+        self.ensure_order_visible(service_name)
+        self.tap_xpath(
+            self.order_row_xpath(service_name),
+            f"点餐商户“{service_name}”",
+        )
+        return service_name
+
+    def tap_yixi_cart_noodle(self) -> str:
+        """点击快餐分类中的“一喜車仔麵”商户。"""
+        return self.tap_order_by_name(self.YIXI_CART_NOODLE_NAME)
 
     def tap_first_visible_order(self) -> str:
         """点击当前分类首个可见商户，并返回商户名称。"""

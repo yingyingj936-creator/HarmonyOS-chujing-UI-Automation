@@ -20,7 +20,7 @@ MINIMUM_GUIDE_INDEX = 25
 @allure.feature("搜索功能")
 @allure.story("搜索结果分组跳转")
 def test_search_result_group_navigation(driver) -> None:
-    """验证搜索结果各分组内容及深分页攻略均可进入对应详情页。"""
+    """验证搜索结果AI总结、各分组内容及深分页攻略均可进入对应详情页。"""
     search_page = OutboundSearchPage(driver)
     service_page = ServiceDetailPage(driver)
     route_page = RouteDetailPage(driver)
@@ -29,6 +29,7 @@ def test_search_result_group_navigation(driver) -> None:
 
     with allure.step("前置准备：从首页进入搜索页"):
         search_page.tap_home_search()
+        search_page.wait_search_start_loaded(timeout=8)
 
     with allure.step("步骤1：在搜索框输入“香港”，搜索按钮可点击"):
         search_page.input_keyword(KEYWORD)
@@ -47,18 +48,20 @@ def test_search_result_group_navigation(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2：点击搜索，展示服务、路线、地点和最新攻略分组"):
+    with allure.step("步骤2：点击搜索，展示AI总结、服务、路线、地点和最新攻略分组"):
         search_page.tap_search_button()
-        for group_name in RESULT_GROUPS:
-            assert_visible_and_attach_highlight(
-                driver,
-                BY.xpath(
-                    search_page.result_group_title_xpath(group_name)
-                ),
-                f"搜索结果分组-{group_name}",
-                timeout=10,
-                attach_crop=False,
-            )
+        search_page.wait_result_ready_with_ai_summary(
+            KEYWORD,
+            RESULT_GROUPS,
+            timeout=12,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(search_page.ai_summary_card_xpath(KEYWORD)),
+            "搜索结果页-AI总结模块",
+            timeout=8,
+            attach_crop=False,
+        )
 
     with allure.step("步骤3.1：点击服务“香港迪士尼”，进入服务详情页"):
         assert_visible_and_attach_highlight(

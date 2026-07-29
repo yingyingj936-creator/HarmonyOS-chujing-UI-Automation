@@ -72,18 +72,18 @@ def test_destination_selector_category_and_letter_navigation(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2.2：点击左侧“东南亚”，右侧内容区顶部展示马来西亚"):
+    with allure.step("步骤2.2：点击左侧“东南亚”，右侧内容区顶部展示泰国"):
         destination_page.tap_southeast_asia_category()
-        malaysia_selector = BY.xpath(destination_page.SOUTHEAST_ASIA_SECTION_XPATH)
-        _wait_selector_near_content_top(driver, malaysia_selector, "马来西亚")
-        malaysia = assert_visible_and_attach_highlight(
+        thailand_selector = BY.xpath(destination_page.SOUTHEAST_ASIA_SECTION_XPATH)
+        _wait_selector_near_content_top(driver, thailand_selector, "泰国")
+        thailand = assert_visible_and_attach_highlight(
             driver,
-            malaysia_selector,
-            "右侧内容区-马来西亚",
+            thailand_selector,
+            "右侧内容区-泰国",
             timeout=8,
             attach_crop=False,
         )
-        _assert_near_content_top(malaysia, "马来西亚")
+        _assert_near_content_top(thailand, "泰国")
 
     with allure.step("步骤2.3：点击左侧“当前/历史”，右侧内容区展示当前/历史"):
         destination_page.tap_first_current_history_entry()

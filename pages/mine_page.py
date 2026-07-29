@@ -4,6 +4,7 @@ from hypium import BY
 from hypium.model.basic_data_type import KeyCode
 
 from pages.base_page import BasePage
+from utils.ui_snapshot import UiSnapshot
 
 
 class MinePage(BasePage):
@@ -192,24 +193,49 @@ class MinePage(BasePage):
         self.wait_xpath(ready_xpath, "我的页收藏区域", timeout=timeout)
 
     def ensure_entry_area_visible(self, *, max_swipes: int = 5) -> None:
-        """回到“我的”页顶部入口区域，避免前序收藏区域滚动影响入口点击。"""
+        """Return to the top entry area of Mine page."""
+        self.ensure_entry_visible(self.MINE_ENTRY_NAMES[0], max_swipes=max_swipes)
+
+    def _mine_page_scroll(self):
+        """Return the Mine page scroll container if the current UI tree exposes it."""
+        snapshot = UiSnapshot(self.driver).capture()
+        return snapshot.find_xpath(self.PAGE_SCROLL_XPATH)
+
+    def _swipe_mine_page(self, direction: str, *, distance: int = 55) -> None:
+        """Swipe Mine page with a screen-level fallback when List is not exposed."""
+        page_scroll = self._mine_page_scroll()
+        if page_scroll is not None:
+            self.driver.swipe(
+                direction,
+                distance=distance,
+                area=page_scroll,
+            )
+        else:
+            start_point = (0.5, 0.32) if direction == "DOWN" else (0.5, 0.78)
+            self.driver.swipe(
+                direction,
+                distance=distance,
+                start_point=start_point,
+                swipe_time=0.5,
+            )
+        time.sleep(0.5)
+
+    def ensure_entry_visible(self, entry_name: str, *, max_swipes: int = 5) -> None:
+        """Return to the top area and ensure the target Mine entry is visible."""
+        entry_xpath = self.mine_entry_xpath(entry_name)
         for swipe_count in range(max_swipes + 1):
-            if self.find_xpath(self.mine_entry_xpath("我的订单")) is not None:
+            snapshot = UiSnapshot(self.driver).capture()
+            entry = snapshot.find_xpath(entry_xpath)
+            if entry is not None and self._is_visible(entry):
                 return
             if swipe_count == max_swipes:
                 break
-            page_scroll = self.wait_xpath(self.PAGE_SCROLL_XPATH, "我的页面滚动列表")
-            self.driver.swipe(
-                "DOWN",
-                distance=55,
-                area=page_scroll,
-            )
-            time.sleep(0.5)
-        raise RuntimeError(f"[{self.PAGE_NAME}] 未回到我的页入口区域")
+            self._swipe_mine_page("DOWN", distance=55)
+        raise RuntimeError(f"[{self.PAGE_NAME}] Mine entry is not visible: {entry_name}")
 
     def tap_entry(self, entry_name: str, *, timeout: float = 8) -> None:
         """点击“我的”页顶部功能入口。"""
-        self.ensure_entry_area_visible()
+        self.ensure_entry_visible(entry_name)
         self.tap_xpath(
             self.mine_entry_xpath(entry_name),
             f"我的页入口“{entry_name}”",
@@ -278,25 +304,32 @@ class MinePage(BasePage):
         self.wait_xpath(ready_xpath, "问题反馈表单", timeout=timeout)
 
     def wait_recent_services_visible(self, *, timeout: float = 10) -> tuple[str, ...]:
-        """等待最近使用区域展示，并返回当前可见服务名称。"""
-        self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "最近使用服务列表", timeout=timeout)
-
+        """Wait for recent services and return visible service names."""
         deadline = time.monotonic() + timeout
         last_names: tuple[str, ...] = ()
         while time.monotonic() < deadline:
-            names = self.visible_recent_service_names()
+            grid, names = self._recent_services_snapshot()
             if names:
                 return names
+            if grid is None:
+                last_names = ()
+                time.sleep(0.4)
+                continue
             last_names = names
             time.sleep(0.4)
 
-        raise RuntimeError(f"[{self.PAGE_NAME}] 最近使用服务列表为空：{last_names}")
+        raise RuntimeError(f"[{self.PAGE_NAME}] recent services list is empty: {last_names}")
 
     def visible_recent_service_names(self) -> tuple[str, ...]:
-        """读取最近使用区域当前可见服务名，按屏幕从左到右排序。"""
-        components = self.driver.find_all_components(
-            BY.xpath(self.RECENT_SERVICE_TEXT_XPATH)
-        )
+        """Read visible recent service names from left to right."""
+        _, names = self._recent_services_snapshot()
+        return names
+
+    def _recent_services_snapshot(self) -> tuple[object | None, tuple[str, ...]]:
+        """Read recent services grid and names from one UI snapshot."""
+        snapshot = UiSnapshot(self.driver).capture()
+        grid = snapshot.find_xpath(self.RECENT_SERVICES_GRID_XPATH)
+        components = snapshot.find_all_xpath(self.RECENT_SERVICE_TEXT_XPATH)
         items: list[tuple[int, int, str]] = []
         for component in self._as_list(components):
             if not self._is_visible(component):
@@ -312,7 +345,7 @@ class MinePage(BasePage):
         for _, _, text in items:
             if text not in names:
                 names.append(text)
-        return tuple(names)
+        return grid, tuple(names)
 
     def recent_service_component(self, service_name: str, *, timeout: float = 8):
         """返回最近使用区域中指定服务的可见卡片。"""
@@ -334,9 +367,12 @@ class MinePage(BasePage):
         raise RuntimeError(f"[{self.PAGE_NAME}] 最近使用区域未找到服务“{service_name}”")
 
     def swipe_recent_services_to_tail(self, *, max_swipes: int = 8) -> str:
-        """横向滑动最近使用列表到末尾，并返回当前末尾服务名。"""
-        grid = self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "最近使用服务列表")
-        names = self.wait_recent_services_visible()
+        """Swipe recent services to the tail and return the last visible name."""
+        grid, names = self._recent_services_snapshot()
+        if grid is None:
+            grid = self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "recent services grid")
+        if not names:
+            names = self.wait_recent_services_visible()
         stable_count = 0
 
         for _ in range(max_swipes):
@@ -354,13 +390,16 @@ class MinePage(BasePage):
                 stable_count = 0
 
         if not names:
-            raise RuntimeError(f"[{self.PAGE_NAME}] 最近使用列表未读取到服务")
+            raise RuntimeError(f"[{self.PAGE_NAME}] recent services list is empty")
         return names[-1]
 
     def swipe_recent_services_to_head(self, *, max_swipes: int = 8) -> tuple[str, ...]:
-        """横向滑动最近使用列表到开头，并返回当前可见服务名。"""
-        grid = self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "最近使用服务列表")
-        names = self.wait_recent_services_visible()
+        """Swipe recent services to the head and return visible names."""
+        grid, names = self._recent_services_snapshot()
+        if grid is None:
+            grid = self.wait_xpath(self.RECENT_SERVICES_GRID_XPATH, "recent services grid")
+        if not names:
+            names = self.wait_recent_services_visible()
         stable_count = 0
 
         for _ in range(max_swipes):
@@ -378,7 +417,7 @@ class MinePage(BasePage):
                 stable_count = 0
 
         if not names:
-            raise RuntimeError(f"[{self.PAGE_NAME}] 最近使用列表未读取到服务")
+            raise RuntimeError(f"[{self.PAGE_NAME}] recent services list is empty")
         return names
 
     def tap_recent_service(self, service_name: str, *, timeout: float = 8) -> None:
@@ -408,24 +447,16 @@ class MinePage(BasePage):
         )
 
     def scroll_favorites_area_into_view(self, *, max_swipes: int = 6) -> None:
-        """滚动“我的”页面，直到收藏区域进入可见区域。"""
+        """Scroll Mine page until the favorites area is visible."""
         for swipe_count in range(max_swipes + 1):
-            if self.find_xpath(self.FAVORITES_TITLE_XPATH) is not None:
+            snapshot = UiSnapshot(self.driver).capture()
+            if snapshot.find_xpath(self.FAVORITES_TITLE_XPATH) is not None:
                 return
             if swipe_count == max_swipes:
                 break
-            page_scroll = self.wait_xpath(
-                self.PAGE_SCROLL_XPATH,
-                "我的页面滚动列表",
-            )
-            self.driver.swipe(
-                "UP",
-                distance=45,
-                area=page_scroll,
-            )
-            time.sleep(0.5)
+            self._swipe_mine_page("UP", distance=45)
 
-        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到收藏区域")
+        raise RuntimeError(f"[{self.PAGE_NAME}] Favorites area is not visible")
 
     def tap_favorite_places_tab(self) -> None:
         """点击收藏区域的“地点”页签。"""
@@ -436,31 +467,23 @@ class MinePage(BasePage):
         )
 
     def tap_favorite_posts_tab(self) -> None:
-        """点击收藏区域的“帖子”页签。"""
+        """Tap the Posts tab in favorites area."""
         self.scroll_favorites_area_into_view()
-        page_scroll = self.wait_xpath(
-            self.PAGE_SCROLL_XPATH,
-            "我的页面滚动列表",
-        )
         for _ in range(8):
-            tab = self.find_xpath(self.FAVORITE_POSTS_TAB_XPATH)
+            snapshot = UiSnapshot(self.driver).capture()
+            tab = snapshot.find_xpath(self.FAVORITE_POSTS_TAB_XPATH)
             if tab is not None:
                 tab.click()
                 return
 
-            tab_text = self.find_xpath(self.FAVORITE_POSTS_TEXT_XPATH)
+            tab_text = snapshot.find_xpath(self.FAVORITE_POSTS_TEXT_XPATH)
             if tab_text is not None:
                 tab_text.click()
                 return
 
-            self.driver.swipe(
-                "UP",
-                distance=30,
-                area=page_scroll,
-            )
-            time.sleep(0.4)
+            self._swipe_mine_page("UP", distance=30)
 
-        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到收藏帖子页签")
+        raise RuntimeError(f"[{self.PAGE_NAME}] Favorite posts tab is not visible")
 
     @classmethod
     def _is_favorite_result_text(cls, text: str) -> bool:
@@ -482,26 +505,21 @@ class MinePage(BasePage):
         return True
 
     def visible_favorite_result_items(self) -> list[tuple[str, object]]:
-        """
-        读取收藏搜索框下方当前可见的收藏内容。
-
-        收藏地点和帖子列表没有稳定业务 id，这里用搜索框的空间位置作为上边界，
-        排除底部导航和标签文案后，返回真实收藏内容文本。
-        """
-        search_input = self.wait_xpath(
-            self.FAVORITE_SEARCH_XPATH,
-            "收藏搜索框",
-        )
-        _, _, _, search_bottom = self._bounds_tuple(search_input)
+        """Read visible favorite result items below the favorite search input."""
         try:
-            components = self.driver.find_all_components(BY.xpath("//Text"))
+            snapshot = UiSnapshot(self.driver).capture()
+            search_input = snapshot.find_xpath(self.FAVORITE_SEARCH_XPATH)
+            if search_input is None:
+                return []
+            text_components = self._as_list(snapshot.find_all_xpath("//Text"))
+            page_scroll = snapshot.find_xpath(self.PAGE_SCROLL_XPATH)
         except Exception:
             return []
-        text_components = self._as_list(components)
+
+        _, _, _, search_bottom = self._bounds_tuple(search_input)
         if not text_components:
             return []
 
-        page_scroll = self.find_xpath(self.PAGE_SCROLL_XPATH)
         if page_scroll is not None:
             bottom_limit = self._bounds_tuple(page_scroll)[3] - 20
         else:
@@ -516,8 +534,13 @@ class MinePage(BasePage):
 
         nav_tops = []
         for component in text_components:
-            text = component.getText().strip()
-            if text not in {"首页", "行程", "附近", "我的"}:
+            text_value = component.getText().strip()
+            if text_value not in {
+                "\u9996\u9875",
+                "\u884c\u7a0b",
+                "\u9644\u8fd1",
+                "\u6211\u7684",
+            }:
                 continue
             if not self._is_visible(component):
                 continue
@@ -532,8 +555,8 @@ class MinePage(BasePage):
         for component in text_components:
             if not self._is_visible(component):
                 continue
-            text = component.getText().strip()
-            if text in seen_texts or not self._is_favorite_result_text(text):
+            text_value = component.getText().strip()
+            if text_value in seen_texts or not self._is_favorite_result_text(text_value):
                 continue
             left, top, right, bottom = self._bounds_tuple(component)
             if right <= left or bottom <= top:
@@ -542,11 +565,11 @@ class MinePage(BasePage):
                 continue
             if top >= bottom_limit:
                 continue
-            candidates.append((top, left, text, component))
-            seen_texts.add(text)
+            candidates.append((top, left, text_value, component))
+            seen_texts.add(text_value)
 
         candidates.sort(key=lambda item: (item[0], item[1]))
-        return [(text, component) for _, _, text, component in candidates]
+        return [(text_value, component) for _, _, text_value, component in candidates]
 
     @classmethod
     def favorite_item_container_xpaths(cls, item_name: str) -> tuple[str, ...]:
@@ -563,28 +586,28 @@ class MinePage(BasePage):
         item_name: str,
         fallback_component,
     ) -> None:
-        """优先点击收藏内容所在的可点击卡片，避免直接点击 Text 不触发跳转。"""
+        """Prefer tapping the clickable container of a favorite item."""
         text_left, text_top, text_right, text_bottom = self._bounds_tuple(
             fallback_component
         )
         candidates = []
-        for xpath in self.favorite_item_container_xpaths(item_name):
-            try:
-                components = self.driver.find_all_components(BY.xpath(xpath))
-            except Exception:
-                components = []
-            for component in self._as_list(components):
-                if not self._is_visible(component):
-                    continue
-                left, top, right, bottom = self._bounds_tuple(component)
-                if (
-                    left <= text_left
-                    and top <= text_top
-                    and right >= text_right
-                    and bottom >= text_bottom
-                ):
-                    area = (right - left) * (bottom - top)
-                    candidates.append((area, top, left, component))
+        union_xpath = " | ".join(self.favorite_item_container_xpaths(item_name))
+        try:
+            components = self.driver.find_all_components(BY.xpath(union_xpath))
+        except Exception:
+            components = []
+        for component in self._as_list(components):
+            if not self._is_visible(component):
+                continue
+            left, top, right, bottom = self._bounds_tuple(component)
+            if (
+                left <= text_left
+                and top <= text_top
+                and right >= text_right
+                and bottom >= text_bottom
+            ):
+                area = (right - left) * (bottom - top)
+                candidates.append((area, top, left, component))
 
         if candidates:
             candidates.sort(key=lambda item: (item[0], item[1], item[2]))
@@ -705,20 +728,11 @@ class MinePage(BasePage):
     ) -> None:
         """滚动“我的”页面，直到收藏地点进入可见区域。"""
         selector = BY.xpath(self.favorite_place_xpath(place_name))
-        page_scroll = self.wait_xpath(
-            self.PAGE_SCROLL_XPATH,
-            "我的页面滚动列表",
-        )
 
         for _ in range(max_swipes + 1):
             if self.driver.find_component(selector) is not None:
                 return
-            self.driver.swipe(
-                "UP",
-                distance=35,
-                area=page_scroll,
-            )
-            time.sleep(0.5)
+            self._swipe_mine_page("UP", distance=35)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 收藏地点列表未找到“{place_name}”"
@@ -766,20 +780,11 @@ class MinePage(BasePage):
     ) -> None:
         """滚动“我的”页面，直到收藏帖子进入可见区域。"""
         selector = BY.xpath(self.favorite_post_xpath(post_title))
-        page_scroll = self.wait_xpath(
-            self.PAGE_SCROLL_XPATH,
-            "我的页面滚动列表",
-        )
 
         for _ in range(max_swipes + 1):
             if self.driver.find_component(selector) is not None:
                 return
-            self.driver.swipe(
-                "UP",
-                distance=35,
-                area=page_scroll,
-            )
-            time.sleep(0.5)
+            self._swipe_mine_page("UP", distance=35)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 收藏帖子列表未找到“{post_title}”"

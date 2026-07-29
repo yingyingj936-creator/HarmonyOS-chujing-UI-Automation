@@ -1,0 +1,1249 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/knr99r",
+    "id": "knr99r",
+    "slide": 2,
+    "layoutId": "eca745e5-9a8c-45e7-bd14-3dc494f1c6dc",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ba06bda2-c85b-4687-b843-145cbc83452c",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "eca745e5-9a8c-45e7-bd14-3dc494f1c6dc",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ba06bda2-c85b-4687-b843-145cbc83452c",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ba06bda2-c85b-4687-b843-145cbc83452c",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3ul8nehw",
+      "id": "1",
+      "bbox": [
+        52,
+        48,
+        980,
+        66
+      ],
+      "geometry": "rect",
+      "text": "目前已经落地的实际效果",
+      "textPreview": "目前已经落地的实际效果",
+      "resolvedFontSize": 42,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 42,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "目前已经落地的实际效果"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "目前已经落地的实际效果",
+          "resolvedTextStyle": {
+            "fontSize": 42,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "目前已经落地的实际效果",
+              "fontSize": 42,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4ve9wjih",
+      "id": "2",
+      "bbox": [
+        52,
+        142,
+        140,
+        5
+      ],
+      "geometry": "rect",
+      "fillColor": "#2F80ED",
+      "lineColor": "#2F80ED",
+      "lineWidth": 1
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5wnqp4z2",
+      "id": "3",
+      "bbox": [
+        52,
+        182,
+        980,
+        42
+      ],
+      "geometry": "rect",
+      "text": "项目已经从个人尝试推进到可运行、可追踪、可维护的自动化测试资产。",
+      "textPreview": "项目已经从个人尝试推进到可运行、可追踪、可维护的自动化测试资产。",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "项目已经从个人尝试推进到可运行、可追踪、可维护的自动化测试资产。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "项目已经从个人尝试推进到可运行、可追踪、可维护的自动化测试资产。",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "项目已经从个人尝试推进到可运行、可追踪、可维护的自动化测试资产。",
+              "fontSize": 24,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxwry90n",
+      "id": "4",
+      "bbox": [
+        52,
+        278,
+        272,
+        152
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#F1F3F5",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ry58reh8",
+      "id": "5",
+      "bbox": [
+        80,
+        303,
+        216,
+        52
+      ],
+      "geometry": "rect",
+      "text": "约69条",
+      "textPreview": "约69条",
+      "resolvedFontSize": 38,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 38,
+        "typeface": "Microsoft YaHei",
+        "color": "#2F80ED",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "约69条"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "约69条",
+          "resolvedTextStyle": {
+            "fontSize": 38,
+            "typeface": "Microsoft YaHei",
+            "color": "#2F80ED",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "约69条",
+              "fontSize": 38,
+              "typeface": "Microsoft YaHei",
+              "color": "#2F80ED",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sze90jid",
+      "id": "6",
+      "bbox": [
+        80,
+        368,
+        216,
+        48
+      ],
+      "geometry": "rect",
+      "text": "已沉淀 UI 自动化用例，覆盖核心回归链路",
+      "textPreview": "已沉淀 UI 自动化用例，覆盖核心回归链路",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "已沉淀 UI"
+          },
+          {
+            "index": 2,
+            "text": "自动化用例，覆盖核心"
+          },
+          {
+            "index": 3,
+            "text": "回归链路"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "已沉淀 UI 自动化用例，覆盖核心回归链路",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "已沉淀 UI 自动化用例，覆盖核心回归链路",
+              "fontSize": 19,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d0nqtozy",
+      "id": "7",
+      "bbox": [
+        356,
+        278,
+        272,
+        152
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#F1F3F5",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/e1wr2t0j",
+      "id": "8",
+      "bbox": [
+        384,
+        303,
+        216,
+        52
+      ],
+      "geometry": "rect",
+      "text": "约50分钟",
+      "textPreview": "约50分钟",
+      "resolvedFontSize": 38,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 38,
+        "typeface": "Microsoft YaHei",
+        "color": "#2F80ED",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "约50分钟"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "约50分钟",
+          "resolvedTextStyle": {
+            "fontSize": 38,
+            "typeface": "Microsoft YaHei",
+            "color": "#2F80ED",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "约50分钟",
+              "fontSize": 38,
+              "typeface": "Microsoft YaHei",
+              "color": "#2F80ED",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z258vyh4",
+      "id": "9",
+      "bbox": [
+        384,
+        368,
+        216,
+        48
+      ],
+      "geometry": "rect",
+      "text": "当前全量自动化执行耗时，替代大量重复手工操作",
+      "textPreview": "当前全量自动化执行耗时，替代大量重复手工操作",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "当前全量自动化执行耗"
+          },
+          {
+            "index": 2,
+            "text": "时，替代大量重复手工"
+          },
+          {
+            "index": 3,
+            "text": "操作"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "当前全量自动化执行耗时，替代大量重复手工操作",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "当前全量自动化执行耗时，替代大量重复手工操作",
+              "fontSize": 19,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/be14rap8",
+      "id": "10",
+      "bbox": [
+        660,
+        278,
+        272,
+        152
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#F1F3F5",
+      "lineWidth": 1
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ads3i5on",
+      "id": "11",
+      "bbox": [
+        688,
+        303,
+        216,
+        52
+      ],
+      "geometry": "rect",
+      "text": "6+模块",
+      "textPreview": "6+模块",
+      "resolvedFontSize": 38,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 38,
+        "typeface": "Microsoft YaHei",
+        "color": "#2F80ED",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "6+模块"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "6+模块",
+          "resolvedTextStyle": {
+            "fontSize": 38,
+            "typeface": "Microsoft YaHei",
+            "color": "#2F80ED",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "6+模块",
+              "fontSize": 38,
+              "typeface": "Microsoft YaHei",
+              "color": "#2F80ED",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xgjmt07y",
+      "id": "12",
+      "bbox": [
+        688,
+        368,
+        216,
+        48
+      ],
+      "geometry": "rect",
+      "text": "覆盖首页、搜索、路线、行程、附近、我的等模块",
+      "textPreview": "覆盖首页、搜索、路线、行程、附近、我的等模块",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "覆盖首页、搜索、路线"
+          },
+          {
+            "index": 2,
+            "text": "、行程、附近、我的等"
+          },
+          {
+            "index": 3,
+            "text": "模块"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "覆盖首页、搜索、路线、行程、附近、我的等模块",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "覆盖首页、搜索、路线、行程、附近、我的等模块",
+              "fontSize": 19,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cfa5kf6d",
+      "id": "13",
+      "bbox": [
+        964,
+        278,
+        264,
+        152
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#F1F3F5",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqh4nqpw",
+      "id": "14",
+      "bbox": [
+        992,
+        303,
+        208,
+        52
+      ],
+      "geometry": "rect",
+      "text": "可追溯",
+      "textPreview": "可追溯",
+      "resolvedFontSize": 38,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 38,
+        "typeface": "Microsoft YaHei",
+        "color": "#2F80ED",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "可追溯"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "可追溯",
+          "resolvedTextStyle": {
+            "fontSize": 38,
+            "typeface": "Microsoft YaHei",
+            "color": "#2F80ED",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "可追溯",
+              "fontSize": 38,
+              "typeface": "Microsoft YaHei",
+              "color": "#2F80ED",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2p83elob",
+      "id": "15",
+      "bbox": [
+        992,
+        368,
+        208,
+        48
+      ],
+      "geometry": "rect",
+      "text": "报告包含中文步骤、截图、断言圈选和失败留痕",
+      "textPreview": "报告包含中文步骤、截图、断言圈选和失败留痕",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "报告包含中文步骤、"
+          },
+          {
+            "index": 2,
+            "text": "截图、断言圈选和失"
+          },
+          {
+            "index": 3,
+            "text": "败留痕"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "报告包含中文步骤、截图、断言圈选和失败留痕",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "报告包含中文步骤、截图、断言圈选和失败留痕",
+              "fontSize": 19,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pszmp072",
+      "id": "16",
+      "bbox": [
+        52,
+        498,
+        390,
+        36
+      ],
+      "geometry": "rect",
+      "text": "已经具备的工程化能力",
+      "textPreview": "已经具备的工程化能力",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "已经具备的工程化能力"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "已经具备的工程化能力",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "已经具备的工程化能力",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/orqlgv6h",
+      "id": "17",
+      "bbox": [
+        52,
+        552,
+        520,
+        120
+      ],
+      "geometry": "rect",
+      "text": "• pytest + Hypium 自动执行\n• Page Object 页面对象封装\n• Allure 可视化报告\n• 运行文档与 Jenkinsfile 基础配置",
+      "textPreview": "• pytest + Hypium 自动执行 | • Page Object 页面对象封装 | • Allure 可视化报告 | • 运行文档与 Jenkinsfile 基础配置",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• pytest + Hypium 自动执行"
+          },
+          {
+            "index": 2,
+            "text": "• Page Object 页面对象封装"
+          },
+          {
+            "index": 3,
+            "text": "• Allure 可视化报告"
+          },
+          {
+            "index": 4,
+            "text": "• 运行文档与 Jenkinsfile 基础配置"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• pytest + Hypium 自动执行",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• pytest + Hypium 自动执行",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "• Page Object 页面对象封装",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• Page Object 页面对象封装",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "• Allure 可视化报告",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• Allure 可视化报告",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 4,
+          "text": "• 运行文档与 Jenkinsfile 基础配置",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 运行文档与 Jenkinsfile 基础配置",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7ml4zup0",
+      "id": "18",
+      "bbox": [
+        706,
+        500,
+        240,
+        36
+      ],
+      "geometry": "rect",
+      "text": "落地结论",
+      "textPreview": "落地结论",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#2F80ED",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "落地结论"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "落地结论",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#2F80ED",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "落地结论",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#2F80ED",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6lcnqpov",
+      "id": "19",
+      "bbox": [
+        706,
+        552,
+        470,
+        96
+      ],
+      "geometry": "rect",
+      "text": "实际价值已经体现在测试效率提升、质量风险前置暴露、失败证据可追溯和团队资产复用上。",
+      "textPreview": "实际价值已经体现在测试效率提升、质量风险前置暴露、失败证据可追溯和团队资产复用上。",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Microsoft YaHei",
+        "color": "#0B0B0C",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "实际价值已经体现在测试效率提升、质量"
+          },
+          {
+            "index": 2,
+            "text": "风险前置暴露、失败证据可追溯和团队资"
+          },
+          {
+            "index": 3,
+            "text": "产复用上。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "实际价值已经体现在测试效率提升、质量风险前置暴露、失败证据可追溯和团队资产复用上。",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#0B0B0C",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "实际价值已经体现在测试效率提升、质量风险前置暴露、失败证据可追溯和团队资产复用上。",
+              "fontSize": 24,
+              "typeface": "Microsoft YaHei",
+              "color": "#0B0B0C",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ihw7yt83",
+      "id": "20",
+      "bbox": [
+        1184,
+        658,
+        54,
+        26
+      ],
+      "geometry": "rect",
+      "text": "02",
+      "textPreview": "02",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "02"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "02",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "02",
+              "fontSize": 13,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

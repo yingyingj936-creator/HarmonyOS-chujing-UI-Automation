@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 from hypium import BY
 
@@ -12,18 +13,49 @@ class OutboundSearchPage(BasePage):
     PAGE_NAME = "OutboundSearchPage"
     HOME_SEARCH_BAR_XPATH = OutboundHomePage.SEARCH_BAR_XPATH
     SEARCH_INPUT_XPATH = '//TextInput'
-    SEARCH_BUTTON_XPATH = '//Text[@text="搜索" and @clickable="true"]'
+    SEARCH_START_INPUT_XPATH = (
+        '//TextInput['
+        'contains(@hint, "搜索") '
+        'or contains(@text, "搜索") '
+        'or string-length(@hint) > 0 '
+        'or string-length(@text) > 0 '
+        'or ./Stack[@clickable="true"]]'
+    )
+    SEARCH_BUTTON_XPATH = (
+        '//Text[@text="搜索" and @clickable="true"]'
+        ' | //Stack[@clickable="true" and .//Text[@text="搜索"]]'
+        ' | //Button[@clickable="true" and .//Text[@text="搜索"]]'
+    )
     BACK_BUTTON_XPATH = '//Row[./Text[@text="搜索"]]/Row[./Image]'
     SEARCH_HISTORY_TITLE_XPATH = '//Text[@text="搜索历史"]'
     CLEAR_HISTORY_BUTTON_XPATH = (
         '//Row[./Text[@text="搜索历史"]]/Row[@clickable="true" and ./Image]'
     )
+    KEYBOARD_PANEL_XPATH = (
+        '//*[@id="inputMethodPanel" or @key="inputMethodPanel"]'
+    )
+    EVERYONE_SEARCHING_TITLE_XPATH = '//Text[@text="大家都在搜"]'
+    EVERYONE_SEARCHING_KEYWORD_TEXT_XPATH = (
+        '//ListItemGroup[./Text[@text="大家都在搜"]]//Grid//Text'
+    )
     PLAY_RANKING_TITLE_XPATH = '//Text[@text="必玩榜"]'
     RANKING_GRID_XPATH = '//Grid[@scrollable="true"]'
-    CLEAR_INPUT_BUTTON_XPATH = '//TextInput/Stack[@clickable="true"]'
+    CLEAR_INPUT_BUTTON_XPATH = (
+        '//TextInput/Stack[@clickable="true"]'
+        ' | //Stack[./TextInput]/Stack[@clickable="true" and ./Image]'
+        ' | //Row[.//TextInput]//Stack[@clickable="true" and ./Image]'
+    )
     RESULT_ROOT_XPATH = '//*[@id="GlobalSearchResultComp"]'
     RESULT_LIST_XPATH = (
         '//*[@id="GlobalSearchResultComp"]/List[@scrollable="true"]'
+    )
+    AI_SUMMARY_CARD_XPATH_TEMPLATE = (
+        '//*[@id="GlobalSearchResultComp"]/List/ListItem'
+        '[.//Text[@text="查看详情"] and .//Text[contains(@text, {keyword})]]'
+    )
+    AI_SUMMARY_DETAIL_BUTTON_XPATH = (
+        '//*[@id="GlobalSearchResultComp"]/List/ListItem[1]'
+        '//Text[@text="查看详情"]'
     )
     LATEST_GUIDES_LIST_XPATH = (
         '//*[@id="GlobalSearchResultComp"]//WaterFlow[@scrollable="true"]'
@@ -52,10 +84,35 @@ class OutboundSearchPage(BasePage):
         """生成指定目的地对应的搜索框 placeholder XPath。"""
         return f'//TextInput[@hint="在{destination}中搜索"]'
 
+    @classmethod
+    def search_start_input_xpath(cls, destination: str | None = None) -> str:
+        """
+        生成搜索启动页输入框 XPath。
+
+        搜索框接入 AI 推荐词后，输入框内可能展示推荐词，而不再只展示
+        “在xx中搜索”这类 placeholder。这里兼容两种形态，用例只验证搜索
+        输入区可用，具体推荐词文案不作为稳定断言。
+        """
+        if not destination:
+            return cls.SEARCH_START_INPUT_XPATH
+        return (
+            f'//TextInput[@hint="在{destination}中搜索"]'
+            f' | {cls.SEARCH_START_INPUT_XPATH}'
+        )
+
     @staticmethod
     def history_keyword_xpath(keyword: str) -> str:
         """生成搜索历史词对应的可点击标签 XPath。"""
         return f'//Column[@clickable="true" and ./Text[@text="{keyword}"]]'
+
+    @classmethod
+    def everyone_searching_keyword_row_xpath(cls, keyword: str) -> str:
+        """生成“大家都在搜”指定热词所在可点击行 XPath。"""
+        return (
+            '//ListItemGroup[./Text[@text="大家都在搜"]]'
+            '//Row[@clickable="true" '
+            f'and ./Text[@text={cls._xpath_literal(keyword)}]]'
+        )
 
     @staticmethod
     def ranking_poi_xpath(poi_name: str) -> str:
@@ -70,12 +127,46 @@ class OutboundSearchPage(BasePage):
     @staticmethod
     def input_value_xpath(keyword: str) -> str:
         """生成已填充指定关键词的搜索框 XPath。"""
-        return f'//TextInput[@text="{keyword}"]'
+        return f'//TextInput[@text={OutboundSearchPage._xpath_literal(keyword)}]'
+
+    @classmethod
+    def result_input_value_xpath(cls, keyword: str) -> str:
+        """生成搜索结果页顶部已填充指定关键词的搜索框 XPath。"""
+        return (
+            f'{cls.RESULT_ROOT_XPATH}//TextInput'
+            f'[@text={cls._xpath_literal(keyword)}]'
+            f' | //TextInput[@text={cls._xpath_literal(keyword)}]'
+        )
 
     @staticmethod
     def result_group_title_xpath(group_name: str) -> str:
         """生成搜索结果分组标题 XPath。"""
         return f'//Text[@text="{group_name}"]'
+
+    @classmethod
+    def ai_summary_card_xpath(cls, keyword: str) -> str:
+        """生成搜索结果页顶部 AI 总结卡片 XPath。"""
+        return cls.AI_SUMMARY_CARD_XPATH_TEMPLATE.format(
+            keyword=cls._xpath_literal(keyword)
+        )
+
+    @classmethod
+    def result_ready_with_ai_summary_xpath(
+        cls,
+        keyword: str,
+        group_names: tuple[str, ...],
+    ) -> str:
+        """生成搜索结果页关键模块一次性就绪 XPath。"""
+        group_conditions = " ".join(
+            f'and .//Text[@text={cls._xpath_literal(group_name)}]'
+            for group_name in group_names
+        )
+        return (
+            f'{cls.RESULT_ROOT_XPATH}'
+            f'[.//ListItem[.//Text[@text="查看详情"] '
+            f'and .//Text[contains(@text, {cls._xpath_literal(keyword)})]] '
+            f'{group_conditions}]'
+        )
 
     @staticmethod
     def result_item_xpath(item_name: str) -> str:
@@ -108,13 +199,208 @@ class OutboundSearchPage(BasePage):
         """步骤：从首页点击搜索框进入搜索页"""
         self.tap_xpath(self.HOME_SEARCH_BAR_XPATH, "首页搜索框")
 
+    def wait_search_start_loaded(
+        self,
+        *,
+        destination: str | None = None,
+        timeout: float = 8,
+    ) -> Any:
+        """等待搜索启动页可操作，兼容目的地 placeholder 和 AI 推荐词。"""
+        return self.wait_xpath(
+            self.search_start_input_xpath(destination),
+            "搜索启动页输入框",
+            timeout=timeout,
+        )
+
+    @staticmethod
+    def _component_text(component: Any | None) -> str:
+        if component is None:
+            return ""
+        try:
+            return (component.getText() or "").strip()
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _component_hint(component: Any | None) -> str:
+        if component is None:
+            return ""
+        try:
+            properties = component.getAllProperties().to_dict()
+        except Exception:
+            return ""
+        return str(properties.get("hint") or "").strip()
+
+    @staticmethod
+    def _is_ai_recommend_keyword(value: str) -> bool:
+        normalized = value.strip()
+        if not normalized:
+            return False
+        fixed_placeholders = {"搜索", "搜索服务、地图、帖子"}
+        if normalized in fixed_placeholders:
+            return False
+        if normalized.startswith("在") and normalized.endswith("中搜索"):
+            return False
+        return True
+
+    def current_ai_recommend_keyword(
+        self,
+        *,
+        timeout: float = 8,
+    ) -> tuple[str, Any]:
+        """读取搜索启动页当前展示的 AI 推荐词，不写死服务端配置值。"""
+        deadline = time.monotonic() + timeout
+        last_values: tuple[str, ...] = ()
+
+        while time.monotonic() < deadline:
+            component = self.driver.wait_for_component(
+                BY.xpath(self.SEARCH_START_INPUT_XPATH),
+                timeout=0.8,
+            )
+            if component is None:
+                time.sleep(0.2)
+                continue
+
+            values = tuple(
+                value
+                for value in (
+                    self._component_text(component),
+                    self._component_hint(component),
+                )
+                if value
+            )
+            last_values = values
+            for value in values:
+                if self._is_ai_recommend_keyword(value):
+                    return value, component
+            time.sleep(0.3)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 搜索框未展示 AI 推荐词，"
+            f"最后读取={last_values or '<空>'}"
+        )
+
+    def first_everyone_searching_keyword(
+        self,
+        *,
+        timeout: float = 8,
+    ) -> tuple[str, Any]:
+        """读取“大家都在搜”模块中当前可见的第一个 AI 推荐词。"""
+        self.wait_xpath(
+            self.EVERYONE_SEARCHING_TITLE_XPATH,
+            "大家都在搜模块",
+            timeout=timeout,
+        )
+        deadline = time.monotonic() + timeout
+        last_values: tuple[str, ...] = ()
+
+        while time.monotonic() < deadline:
+            components = self.driver.find_all_components(
+                BY.xpath(self.EVERYONE_SEARCHING_KEYWORD_TEXT_XPATH)
+            )
+            if components is None:
+                components = []
+            elif not isinstance(components, list):
+                components = [components]
+
+            values: list[str] = []
+            for component in components:
+                value = self._component_text(component)
+                if not value:
+                    continue
+                values.append(value)
+                if self._is_ai_recommend_keyword(value):
+                    return value, component
+            last_values = tuple(values)
+            time.sleep(0.3)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] “大家都在搜”未展示可用 AI 推荐词，"
+            f"最后读取={last_values or '<空>'}"
+        )
+
+    def clear_input_if_needed(self, *, timeout: float = 1) -> None:
+        """如果搜索框已有真实输入值，先点清除，避免 AI 推荐词或旧词拼接。"""
+        search_input = self.driver.wait_for_component(
+            BY.xpath(self.SEARCH_INPUT_XPATH),
+            timeout=timeout,
+        )
+        if not self._component_text(search_input):
+            return
+
+        clear_button = self.driver.wait_for_component(
+            BY.xpath(self.CLEAR_INPUT_BUTTON_XPATH),
+            timeout=timeout,
+        )
+        if clear_button is None:
+            return
+
+        clear_button.click()
+        deadline = time.monotonic() + max(timeout, 1)
+        while time.monotonic() < deadline:
+            refreshed_input = self.driver.wait_for_component(
+                BY.xpath(self.SEARCH_INPUT_XPATH),
+                timeout=0.3,
+            )
+            if not self._component_text(refreshed_input):
+                return
+            time.sleep(0.2)
+
     def input_keyword(self, keyword: str) -> None:
         """在搜索框中输入关键词。"""
+        self.clear_input_if_needed(timeout=1)
         self.input_xpath(self.SEARCH_INPUT_XPATH, keyword, "搜索输入框")
 
     def tap_search_button(self) -> None:
         """点击搜索框右侧的页面内“搜索”按钮。"""
         self.tap_xpath(self.SEARCH_BUTTON_XPATH, "搜索按钮")
+
+    def tap_everyone_searching_keyword(self, keyword: str) -> None:
+        """点击“大家都在搜”模块中的指定 AI 推荐词。"""
+        self.tap_xpath(
+            self.everyone_searching_keyword_row_xpath(keyword),
+            f"大家都在搜 AI 推荐词“{keyword}”",
+        )
+
+    def wait_result_keyword_filled(
+        self,
+        keyword: str,
+        *,
+        timeout: float = 8,
+    ) -> Any:
+        """等待搜索结果页顶部搜索框填充为指定关键词。"""
+        return self.wait_xpath(
+            self.result_input_value_xpath(keyword),
+            f"搜索结果页顶部搜索框-{keyword}",
+            timeout=timeout,
+        )
+
+    def wait_result_has_visible_content(self, *, timeout: float = 8) -> Any:
+        """等待搜索结果页出现可见结果内容，排除空状态和加载失败。"""
+        return self.wait_any_xpath(
+            (
+                f'{self.RESULT_ROOT_XPATH}//ListItem[.//Text]',
+                f'{self.RESULT_ROOT_XPATH}//GridItem[.//Text]',
+                f'{self.RESULT_ROOT_XPATH}//Column[.//Text]',
+                f'{self.RESULT_ROOT_XPATH}//WaterFlow//Text',
+            ),
+            "搜索结果内容",
+            timeout=timeout,
+        )
+
+    def wait_result_ready_with_ai_summary(
+        self,
+        keyword: str,
+        group_names: tuple[str, ...],
+        *,
+        timeout: float = 12,
+    ) -> Any:
+        """等待搜索结果页 AI 总结和结果分组均展示。"""
+        return self.wait_xpath(
+            self.result_ready_with_ai_summary_xpath(keyword, group_names),
+            "搜索结果页AI总结和结果分组",
+            timeout=timeout,
+        )
 
     def input_and_tap_search(self, keyword: str) -> None:
         """输入关键词并点击页面内搜索按钮。"""

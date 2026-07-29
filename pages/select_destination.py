@@ -23,7 +23,7 @@ class SelectDestinationPage(BasePage):
     LETTER_G_XPATH = '//AlphabetIndexer//Text[@text="G"]'
 
     HOT_SECTION_XPATH = '//ListItemGroup/Text[@text="热门"]'
-    SOUTHEAST_ASIA_SECTION_XPATH = '//ListItemGroup/Text[@text="马来西亚"]'
+    SOUTHEAST_ASIA_SECTION_XPATH = '//ListItemGroup/Text[@text="泰国"]'
     CURRENT_LOCATION_SECTION_XPATH = (
         '//ListItemGroup/Text[@text="当前/历史"]'
     )

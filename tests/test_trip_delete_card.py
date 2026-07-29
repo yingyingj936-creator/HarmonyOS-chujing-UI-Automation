@@ -9,6 +9,15 @@ from utils.allure_visual import (
     attach_highlighted_bounds,
 )
 
+PROTECTED_TRIP_TITLES = ("香港逛吃两日游",)
+
+
+def _select_delete_target(card_infos):
+    for card, title in card_infos:
+        if not any(protected in title for protected in PROTECTED_TRIP_TITLES):
+            return card, title
+    return card_infos[0]
+
 
 @allure.feature("行程管理")
 @allure.story("删除我的行程")
@@ -24,7 +33,7 @@ def test_delete_trip_card_after_confirm(driver) -> None:
         if not card_infos:
             pytest.skip("前置条件不满足：我的行程列表当前没有可删除的行程")
 
-        target_card, target_title = card_infos[0]
+        target_card, target_title = _select_delete_target(card_infos)
         attach_highlighted_bounds(
             driver,
             target_card.getBounds(),
@@ -37,8 +46,12 @@ def test_delete_trip_card_after_confirm(driver) -> None:
         )
 
     with allure.step("步骤1：长按目标行程，校验弹出“编辑行程”卡片"):
-        trip_manager.long_press_trip_card(target_card, press_time=2.0)
-        trip_manager.wait_edit_trip_menu_loaded(timeout=8)
+        trip_manager.long_press_trip_card_until_menu(
+            target_card,
+            trip_name=target_title,
+            press_time=2.0,
+            attempts=3,
+        )
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_manager.EDIT_TRIP_MENU_TITLE_XPATH),

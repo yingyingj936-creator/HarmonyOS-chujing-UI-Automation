@@ -1,0 +1,938 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/qfd7qq",
+    "id": "qfd7qq",
+    "slide": 3,
+    "layoutId": "94c72dae-d68d-47fb-8875-b906e8794c5d",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "9a829127-b455-4e4b-92ee-15150be06ed9",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "94c72dae-d68d-47fb-8875-b906e8794c5d",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "9a829127-b455-4e4b-92ee-15150be06ed9",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "9a829127-b455-4e4b-92ee-15150be06ed9",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2x872xcn",
+      "id": "1",
+      "bbox": [
+        42,
+        38,
+        1010,
+        86
+      ],
+      "geometry": "rect",
+      "text": "项目起点是解决真实回归痛点",
+      "textPreview": "项目起点是解决真实回归痛点",
+      "resolvedFontSize": 36,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 36,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "项目起点是解决真实回归痛点"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "项目起点是解决真实回归痛点",
+          "resolvedTextStyle": {
+            "fontSize": 36,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "项目起点是解决真实回归痛点",
+              "fontSize": 36,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p0z6xsve",
+      "id": "2",
+      "bbox": [
+        42,
+        112,
+        960,
+        34
+      ],
+      "geometry": "rect",
+      "text": "不是为了展示 AI，而是为了降低重复测试成本和版本风险",
+      "textPreview": "不是为了展示 AI，而是为了降低重复测试成本和版本风险",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "不是为了展示 AI，而是为了降低重复测试成本和版本风险"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "不是为了展示 AI，而是为了降低重复测试成本和版本风险",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "不是为了展示 AI，而是为了降低重复测试成本和版本风险",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ozqp4nut",
+      "id": "3",
+      "bbox": [
+        42,
+        158,
+        112,
+        4
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/b21oz2d4",
+      "id": "4",
+      "bbox": [
+        1184,
+        658,
+        54,
+        26
+      ],
+      "geometry": "rect",
+      "text": "03",
+      "textPreview": "03",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "03"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "03",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "03",
+              "fontSize": 13,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/a1876xcj",
+      "id": "5",
+      "bbox": [
+        42,
+        210,
+        362,
+        316
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2",
+      "lineColor": "#F2F2F2",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xoj61cva",
+      "id": "6",
+      "bbox": [
+        72,
+        246,
+        280,
+        38
+      ],
+      "geometry": "rect",
+      "text": "手工回归",
+      "textPreview": "手工回归",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "手工回归"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "手工回归",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "手工回归",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w3ap87up",
+      "id": "7",
+      "bbox": [
+        72,
+        316,
+        284,
+        144
+      ],
+      "geometry": "rect",
+      "text": "• 链路重复执行\n• 长流程容易漏点\n• 每次版本都要重新操作",
+      "textPreview": "• 链路重复执行 | • 长流程容易漏点 | • 每次版本都要重新操作",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• 链路重复执行"
+          },
+          {
+            "index": 2,
+            "text": "• 长流程容易漏点"
+          },
+          {
+            "index": 3,
+            "text": "• 每次版本都要重新操作"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• 链路重复执行",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 链路重复执行",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "• 长流程容易漏点",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 长流程容易漏点",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "• 每次版本都要重新操作",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 每次版本都要重新操作",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/r6xonid0",
+      "id": "8",
+      "bbox": [
+        459,
+        210,
+        362,
+        316
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2",
+      "lineColor": "#F2F2F2",
+      "lineWidth": 1
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q5onudwf",
+      "id": "9",
+      "bbox": [
+        489,
+        246,
+        300,
+        38
+      ],
+      "geometry": "rect",
+      "text": "HarmonyOS UI",
+      "textPreview": "HarmonyOS UI",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "HarmonyOS UI"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "HarmonyOS UI",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "HarmonyOS UI",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/432x0bi5",
+      "id": "10",
+      "bbox": [
+        489,
+        316,
+        284,
+        144
+      ],
+      "geometry": "rect",
+      "text": "• 页面结构复杂\n• 设备差异影响定位\n• 等待和返回路径容易不稳定",
+      "textPreview": "• 页面结构复杂 | • 设备差异影响定位 | • 等待和返回路径容易不稳定",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• 页面结构复杂"
+          },
+          {
+            "index": 2,
+            "text": "• 设备差异影响定位"
+          },
+          {
+            "index": 3,
+            "text": "• 等待和返回路径容易不稳定"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• 页面结构复杂",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 页面结构复杂",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "• 设备差异影响定位",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 设备差异影响定位",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "• 等待和返回路径容易不稳定",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 等待和返回路径容易不稳定",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p4betgzq",
+      "id": "11",
+      "bbox": [
+        876,
+        210,
+        362,
+        316
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2",
+      "lineColor": "#F2F2F2",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/21kfy10f",
+      "id": "12",
+      "bbox": [
+        906,
+        246,
+        280,
+        38
+      ],
+      "geometry": "rect",
+      "text": "结果追溯",
+      "textPreview": "结果追溯",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "结果追溯"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "结果追溯",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "结果追溯",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/32twr6hk",
+      "id": "13",
+      "bbox": [
+        906,
+        316,
+        284,
+        144
+      ],
+      "geometry": "rect",
+      "text": "• 失败现场不清晰\n• 截图依赖人工\n• 日志排查成本高",
+      "textPreview": "• 失败现场不清晰 | • 截图依赖人工 | • 日志排查成本高",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Microsoft YaHei",
+        "color": "#5F6368",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• 失败现场不清晰"
+          },
+          {
+            "index": 2,
+            "text": "• 截图依赖人工"
+          },
+          {
+            "index": 3,
+            "text": "• 日志排查成本高"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• 失败现场不清晰",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 失败现场不清晰",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "• 截图依赖人工",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 截图依赖人工",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "• 日志排查成本高",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Microsoft YaHei",
+            "color": "#5F6368",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• 日志排查成本高",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#5F6368",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c7mx4bih",
+      "id": "14",
+      "bbox": [
+        42,
+        596,
+        1050,
+        42
+      ],
+      "geometry": "rect",
+      "text": "结论：需要一套能批量执行、自动留痕、持续维护的 UI 自动化能力。",
+      "textPreview": "结论：需要一套能批量执行、自动留痕、持续维护的 UI 自动化能力。",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "结论：需要一套能批量执行、自动留痕、持续维护的 UI 自动化能力。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "结论：需要一套能批量执行、自动留痕、持续维护的 UI 自动化能力。",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "结论：需要一套能批量执行、自动留痕、持续维护的 UI 自动化能力。",
+              "fontSize": 26,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -20,6 +20,9 @@ class TripEditPage(BasePage):
     DAY_1_TAB_XPATH = '//*[@id="tabBarList"]//Text[@text="Day1" and @clickable="true"]'
     DAY_N_TAB_XPATH = '//*[@id="tabBarList"]//Text[@text="Day2" and @clickable="true"]'
     DAY_3_TAB_XPATH = '//*[@id="tabBarList"]//Text[@text="Day3" and @clickable="true"]'
+    DAY_3_TAB_CONTAINER_XPATH = (
+        '//*[@id="tabBarList"]//*[@clickable="true" and .//Text[@text="Day3"]]'
+    )
     PENDING_TAB_XPATH = '//*[@id="tabBarList"]//Text[@text="待规划" and @clickable="true"]'
     ADD_TEXT_XPATH = (
         '//*[@id="tabBarList"]//Text[contains(@text, "新增") or contains(@text, "添加")]'
@@ -27,6 +30,8 @@ class TripEditPage(BasePage):
     ADD_ICON_XPATH = '//*[@id="tabBarList"]//*[@clickable="true" and not(.//Text)]'
     OVERVIEW_LIST_XPATH = '//*[@id="route_editor_overview"]'
     CHILD_LIST_XPATH = '//*[@id="route_editor_childs"]'
+    CHILD_DAY_3_SECTION_XPATH = '//*[@id="route_editor_childs"]//Text[@text="Day3"]'
+    CHILD_PENDING_SECTION_XPATH = '//*[@id="route_editor_childs"]//Text[@text="待规划"]'
     DAY_1_SECTION_XPATH = (
         '//*[@id="route_editor_overview"]//*[@clickable="true" '
         'and .//Text[@text="Day1"] and .//Text[@text="通菜街"]]'
@@ -224,10 +229,47 @@ class TripEditPage(BasePage):
 
     def tap_day_3_tab(self, *, timeout: float = 8) -> Any:
         """点击Day3 Tab。"""
-        component = self.tap_xpath(
+        text_component = self.wait_xpath(
             self.DAY_3_TAB_XPATH,
             "编辑行程页Day3 Tab",
             timeout=timeout,
+        )
+        text_bounds = text_component.getBounds()
+        text_center_x = (int(text_bounds.left) + int(text_bounds.right)) // 2
+        text_center_y = (int(text_bounds.top) + int(text_bounds.bottom)) // 2
+
+        candidates: list[tuple[int, Any]] = []
+        for component in self._as_list(
+            self.driver.find_all_components(BY.xpath(self.DAY_3_TAB_CONTAINER_XPATH))
+        ):
+            if not self._is_visible(component):
+                continue
+            bounds = component.getBounds()
+            left = int(bounds.left)
+            right = int(bounds.right)
+            top = int(bounds.top)
+            bottom = int(bounds.bottom)
+            width = right - left
+            height = bottom - top
+            if (
+                left <= text_center_x <= right
+                and top <= text_center_y <= bottom
+                and width <= 260
+                and height <= 160
+            ):
+                candidates.append((width * height, component))
+
+        component = text_component
+        if candidates:
+            candidates.sort(key=lambda item: item[0])
+            component = candidates[0][1]
+
+        bounds = component.getBounds()
+        self.driver.click(
+            (
+                (int(bounds.left) + int(bounds.right)) // 2,
+                (int(bounds.top) + int(bounds.bottom)) // 2,
+            )
         )
         return component
 
@@ -319,19 +361,30 @@ class TripEditPage(BasePage):
         )
         return self.wait_xpath(ready_xpath, "编辑行程页待规划内容", timeout=timeout)
 
-    def wait_day_3_empty_loaded(self, *, timeout: float = 8) -> None:
-        """等待新增Day3空列表加载完成。"""
-        self.snapshot_xpaths(
-            {
-                "tab": (self.DAY_3_TAB_XPATH, "编辑行程页Day3 Tab"),
-                "list": (self.CHILD_LIST_XPATH, "编辑行程页Day3列表"),
-                "add": (
-                    self.PENDING_ADD_ENTRY_XPATH,
-                    "编辑行程页Day3添加地点活动入口",
-                ),
-            },
-            timeout=timeout,
-        )
+    def wait_day_3_empty_loaded(self, *, timeout: float = 8) -> Any:
+        """等待新增Day3分组展示，并返回Day3分组下的添加地点入口。"""
+        return self.day_3_add_place_entry(timeout=timeout)
+
+    def switch_to_day_3_empty(self, *, timeout: float = 12) -> Any:
+        """切换或定位新增Day3，并返回Day3分组下的添加地点入口。"""
+        deadline = time.time() + timeout
+        last_error: Exception | None = None
+
+        while time.time() < deadline:
+            try:
+                self.tap_day_3_tab(timeout=min(2, max(0.5, deadline - time.time())))
+            except RuntimeError as error:
+                last_error = error
+            time.sleep(0.5)
+            try:
+                return self.day_3_add_place_entry(
+                    timeout=min(2.5, max(0.8, deadline - time.time()))
+                )
+            except RuntimeError as error:
+                last_error = error
+                time.sleep(0.4)
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到Day3分组下的添加地点入口：{last_error}")
 
     def first_poi_select_icon(self, *, timeout: float = 8) -> Any:
         """返回 Day1 第一个 POI 左侧勾选框图标。"""
@@ -875,6 +928,8 @@ class TripEditPage(BasePage):
         )
         texts: list[str] = []
         for component in components:
+            if not self._is_visible(component):
+                continue
             text = component.getText().strip()
             if text:
                 texts.append(text)
@@ -932,6 +987,84 @@ class TripEditPage(BasePage):
         """点击当前Day列表里的添加地点/活动入口。"""
         self.child_add_place_entry(timeout=timeout).click()
 
+    def day_3_add_place_entry(self, *, timeout: float = 8) -> Any:
+        """返回Day3分组下方、待规划分组上方的添加地点/活动入口。"""
+        deadline = time.time() + timeout
+        last_debug: str = ""
+
+        while time.time() < deadline:
+            candidates = self._day_3_add_place_candidates()
+            if candidates:
+                return candidates[0][1]
+
+            day3_titles = self._visible_component_candidates(
+                self.CHILD_DAY_3_SECTION_XPATH
+            )
+            pending_titles = self._visible_component_candidates(
+                self.CHILD_PENDING_SECTION_XPATH
+            )
+            add_entries = self._visible_component_candidates(
+                self.PENDING_ADD_ENTRY_XPATH
+            )
+            last_debug = (
+                f"Day3标题={self._debug_candidate_bounds(day3_titles)}，"
+                f"待规划标题={self._debug_candidate_bounds(pending_titles)}，"
+                f"添加入口={self._debug_candidate_bounds(add_entries)}"
+            )
+            time.sleep(0.3)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未找到Day3分组下的添加地点/活动入口，timeout={timeout}s，{last_debug}"
+        )
+
+    def tap_day_3_add_place_entry(self, *, timeout: float = 8) -> Any:
+        """点击Day3分组下方的添加地点/活动入口。"""
+        entry = self.day_3_add_place_entry(timeout=timeout)
+        bounds = entry.getBounds()
+        self.driver.click(
+            (
+                (int(bounds.left) + int(bounds.right)) // 2,
+                (int(bounds.top) + int(bounds.bottom)) // 2,
+            )
+        )
+        return entry
+
+    def _day_3_add_place_candidates(self) -> list[tuple[int, Any]]:
+        day3_titles = self._visible_component_candidates(self.CHILD_DAY_3_SECTION_XPATH)
+        add_entries = self._visible_component_candidates(self.PENDING_ADD_ENTRY_XPATH)
+        if not day3_titles or not add_entries:
+            return []
+
+        day3_bottom = max(int(component.getBounds().bottom) for _, _, _, component in day3_titles)
+        pending_titles = self._visible_component_candidates(self.CHILD_PENDING_SECTION_XPATH)
+        pending_top = min(
+            (
+                int(component.getBounds().top)
+                for _, _, _, component in pending_titles
+                if int(component.getBounds().top) > day3_bottom
+            ),
+            default=10**9,
+        )
+
+        candidates: list[tuple[int, Any]] = []
+        for _, _, _, component in add_entries:
+            bounds = component.getBounds()
+            top = int(bounds.top)
+            if day3_bottom <= top < pending_top:
+                candidates.append((top, component))
+        candidates.sort(key=lambda item: item[0])
+        return candidates
+
+    @staticmethod
+    def _debug_candidate_bounds(candidates: list[tuple[int, int, int, Any]]) -> list[list[int]]:
+        bounds_list: list[list[int]] = []
+        for _, _, _, component in candidates:
+            bounds = component.getBounds()
+            bounds_list.append(
+                [int(bounds.left), int(bounds.top), int(bounds.right), int(bounds.bottom)]
+            )
+        return bounds_list
+
     @classmethod
     def add_poi_result_text_xpath(cls, poi_name: str) -> str:
         """返回添加地点搜索结果里的指定POI文本 XPath。"""
@@ -984,6 +1117,40 @@ class TripEditPage(BasePage):
         )
         return result
 
+    def tap_add_poi_search_result_and_wait_added(
+        self,
+        poi_name: str,
+        *,
+        timeout: float = 12,
+    ) -> Any:
+        """点击添加地点搜索结果，并确认回到当前Day列表且POI已出现。"""
+        deadline = time.time() + timeout
+        last_error: Exception | None = None
+        while time.time() < deadline:
+            try:
+                self.tap_add_poi_search_result(
+                    poi_name,
+                    timeout=min(3, max(0.5, deadline - time.time())),
+                )
+                break
+            except RuntimeError as error:
+                last_error = error
+                time.sleep(0.4)
+        else:
+            raise RuntimeError(
+                f"[{self.PAGE_NAME}] 未能点击添加地点搜索结果“{poi_name}”：{last_error}"
+            )
+
+        self.driver.wait_for_component_disappear(
+            BY.xpath(self.ADD_POI_SEARCH_INPUT_XPATH),
+            timeout=min(5, max(1, deadline - time.time())),
+        )
+        return self.scroll_child_list_until_poi_visible(
+            poi_name,
+            max_swipes=8,
+            timeout=max(3, deadline - time.time()),
+        )
+
     def back_button(self, *, timeout: float = 8) -> Any:
         """返回编辑页左上角页面内返回按钮。"""
         deadline = time.time() + timeout
@@ -1019,13 +1186,21 @@ class TripEditPage(BasePage):
         )
 
     def tap_edit_complete(self, *, timeout: float = 8) -> Any:
-        """点击编辑完成入口。"""
-        complete = self.edit_complete_button(timeout=timeout)
-        bounds = complete.getBounds()
-        self.driver.click(
-            (
-                (int(bounds.left) + int(bounds.right)) // 2,
-                (int(bounds.top) + int(bounds.bottom)) // 2,
+        """点击编辑完成入口，并确认已经离开编辑态。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            complete = self.edit_complete_button(
+                timeout=min(2, max(0.5, deadline - time.time()))
             )
-        )
-        return complete
+            bounds = complete.getBounds()
+            self.driver.click(
+                (
+                    (int(bounds.left) + int(bounds.right)) // 2,
+                    (int(bounds.top) + int(bounds.bottom)) // 2,
+                )
+            )
+            time.sleep(0.8)
+            if self.find_xpath(self.EDIT_COMPLETE_XPATH) is None:
+                return complete
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] 点击编辑完成后仍停留在编辑页")

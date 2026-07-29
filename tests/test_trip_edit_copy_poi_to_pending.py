@@ -182,7 +182,7 @@ def test_trip_edit_copy_day1_poi_to_pending(driver) -> None:
             complete.getBounds(),
             "编辑行程页编辑完成按钮",
         )
-        complete.click()
+        trip_edit.tap_edit_complete(timeout=10)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         _assert_detail_day1_and_pending_have_poi(
             driver,

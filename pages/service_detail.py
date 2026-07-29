@@ -1,3 +1,5 @@
+import time
+
 from hypium import BY
 
 from pages.base_page import BasePage
@@ -30,3 +32,4 @@ class ServiceDetailPage(BasePage):
     def press_system_back(self) -> None:
         """服务页没有页面内返回按钮，使用系统返回键回搜索结果页。"""
         self.driver.press_back()
+        time.sleep(2.5)

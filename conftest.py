@@ -12,6 +12,7 @@ from pages.outbound_home import OutboundHomePage
 from pages.select_destination import SelectDestinationPage
 from utils.allure_step_state import install_allure_step_tracking
 from utils.component_cache import invalidate_component_cache
+from utils.ui_snapshot import UiSnapshot
 
 FILE_ORDER = {
     # Read-only display and browse cases run first to avoid account-state pollution.
@@ -60,21 +61,21 @@ FILE_ORDER = {
     "test_local_service_search.py": 41,
     "test_food_ordering_categories.py": 42,
     "test_food_ordering_search.py": 43,
-    "test_search_start_page_interactions.py": 44,
-    "test_search_scope_by_destination.py": 45,
-    "test_search_result_groups.py": 46,
-    "test_poi_hotel_booking_and_navigation.py": 47,
-    "test_poi_recommendation_post.py": 48,
-    "test_nearby_poi_recommendation_review_locate.py": 49,
-    "test_clear_search_history.py": 50,
+    "test_search_ai_recommend_auto_search.py": 44,
+    "test_search_start_page_interactions.py": 45,
+    "test_search_scope_by_destination.py": 46,
+    "test_search_result_groups.py": 47,
+    "test_poi_hotel_booking_and_navigation.py": 48,
+    "test_poi_recommendation_post.py": 49,
+    "test_nearby_poi_recommendation_review_locate.py": 50,
+    "test_clear_search_history.py": 51,
 
     # Account-mutating cases run last: favorites, likes, recents, tasks, and trips.
-    "test_favorite_poi_from_ranking.py": 51,
-    "test_home_guide_like_persistence.py": 52,
-    "test_home_post_favorite_collection.py": 53,
-    "test_home_hot_route_play_mode_poi_favorite.py": 54,
-    "test_multitask_management.py": 55,
-    "test_multitask_return_home.py": 56,
+    "test_favorite_poi_from_ranking.py": 52,
+    "test_home_guide_like_persistence.py": 53,
+    "test_home_post_favorite_collection.py": 54,
+    "test_home_hot_route_play_mode_poi_favorite.py": 55,
+    "test_multitask_management.py": 56,
     "test_mine_recent_service_order.py": 57,
     "test_home_hot_route_join_trip.py": 58,
     "test_trip_reference_route_join_trip.py": 59,
@@ -324,8 +325,51 @@ def _inspect_home_state(
             home_tab = component
         elif "搜索服务" in text or "搜索服务" in hint:
             search_visible = True
+        else:
+            bounds = component.getBounds()
+            search_visible = (
+                int(bounds.right) > int(bounds.left)
+                and int(bounds.bottom) > int(bounds.top)
+            )
 
     return top_ready, search_visible and home_tab is not None, home_tab
+
+
+def _dismiss_unsaved_edit_dialog_if_present(driver) -> bool:
+    """恢复首页时处理编辑页未保存弹窗，避免污染后续用例。"""
+    snapshot = UiSnapshot(driver).capture()
+    dialog = snapshot.find_xpath(
+        '//Dialog[.//Text[contains(@text, "保存") '
+        'or contains(@text, "编辑") '
+        'or contains(@text, "修改")]]'
+    )
+    if dialog is None:
+        return False
+
+    discard = snapshot.find_xpath(
+        '//Dialog//Text[@text="不保存" '
+        'or @text="放弃" '
+        'or @text="离开" '
+        'or @text="退出" '
+        'or contains(@text, "不保存") '
+        'or contains(@text, "放弃") '
+        'or contains(@text, "离开") '
+        'or contains(@text, "退出")]'
+    )
+    if discard is None:
+        return False
+
+    discard.click()
+    invalidate_component_cache(driver)
+    driver.wait_for_component_disappear(
+        BY.xpath(
+            '//Dialog[.//Text[contains(@text, "保存") '
+            'or contains(@text, "编辑") '
+            'or contains(@text, "修改")]]'
+        ),
+        timeout=2,
+    )
+    return True
 
 
 def _return_to_home(
@@ -344,6 +388,10 @@ def _return_to_home(
         _, on_home, home_tab = state
         if on_home:
             return True
+
+        if _dismiss_unsaved_edit_dialog_if_present(driver):
+            state = None
+            continue
 
         if home_tab is not None:
             try:
@@ -364,6 +412,7 @@ def _return_to_home(
             driver.press_back()
             invalidate_component_cache(driver)
             time.sleep(settings.cleanup_back_interval_seconds)
+            _dismiss_unsaved_edit_dialog_if_present(driver)
             state = None
         except Exception:
             return False

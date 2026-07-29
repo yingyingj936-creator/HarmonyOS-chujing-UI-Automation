@@ -72,9 +72,10 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
 
     with allure.step("步骤5：点击右下角“导航”，进入花瓣地图"):
         poi_page.tap_navigation()
+        marker = poi_page.wait_petal_map_navigation_loaded(POI_NAME, timeout=18)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_page.MAP_ROUTE_PANEL_XPATH),
+            marker,
             f"花瓣地图导航页-{POI_NAME}",
             timeout=12,
             attach_crop=False,

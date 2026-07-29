@@ -23,7 +23,9 @@ class RouteDetailPage(BasePage):
     )
     WARM_TIPS_XPATH = '//Text[contains(@text, "\u6e29\u99a8\u63d0\u793a")]'
     BACK_BUTTON_XPATH = (
-        '//*[@id="mapPageRoot"]//Row[@clickable="true" and ./Image]'
+        '//*[@id="mapPageRoot"]//Row[./Text and ./Row[@clickable="true" '
+        'and ./Image and not(.//Text)]]/Row[@clickable="true" '
+        'and ./Image and not(.//Text)]'
     )
 
     OVERVIEW_TAB_XPATH = '//Text[@text="\u5168\u89c8" and @clickable="true"]'
@@ -106,6 +108,21 @@ class RouteDetailPage(BasePage):
     POI_DETAIL_CLOSE_XPATH = '//*[@id="map_bottom_panel"]//Image[@clickable="true"]'
     ROUTE_JOIN_TRIP_BUTTON_XPATH = '//*[@id="copyPlanBtn"]'
     ROUTE_MAP_LOADING_XPATH = '//Text[contains(@text, "加载中")]'
+    ROUTE_ACTION_READY_XPATH = (
+        '//*[@id="mapPageRoot" '
+        'and .//*[@id="mapview"] '
+        'and .//*[@id="map_bottom_panel"] '
+        'and .//*[@id="copyPlanBtn"]]'
+    )
+    ROUTE_CONTENT_READY_XPATH_TEMPLATE = (
+        '//*[@id="mapPageRoot" '
+        'and .//*[@id="mapview"] '
+        'and .//*[@id="map_bottom_panel"] '
+        'and .//*[@id="copyPlanBtn"] '
+        'and .//Text[@text="{route_name}\u00b7\u6982\u89c8"] '
+        'and .//Text[starts-with(@text, "\u5173\u952e\u666f\u70b9\uff1a")] '
+        'and .//Text[@text="\u884c\u7a0b\u89c4\u5212"]]'
+    )
     ROUTE_ONE_CLICK_PLAY_BUTTON_XPATH = (
         '//Text[@text="\u4e00\u952e\u8ddf\u73a9" and @clickable="true"]'
     )
@@ -215,6 +232,10 @@ class RouteDetailPage(BasePage):
         return cls.OVERVIEW_TITLE_XPATH_TEMPLATE.format(route_name=route_name)
 
     @classmethod
+    def route_content_ready_xpath(cls, route_name: str) -> str:
+        return cls.ROUTE_CONTENT_READY_XPATH_TEMPLATE.format(route_name=route_name)
+
+    @classmethod
     def surrounding_category_xpath(cls, category_name: str) -> str:
         return cls.SURROUNDING_CATEGORY_XPATH_TEMPLATE.format(
             category_name=category_name
@@ -237,15 +258,76 @@ class RouteDetailPage(BasePage):
         )
 
     def wait_loaded(self, route_name: str, *, timeout: float = 12) -> dict[str, object]:
-        """Wait until the route detail map and overview card load."""
-        return {
-            "map": self.wait_xpath(self.MAP_VIEW_XPATH, "路线地图背景", timeout=timeout),
-            "overview_title": self.wait_xpath(
-                self.overview_title_xpath(route_name),
-                "路线概览标题",
-                timeout=timeout,
-            ),
-        }
+        """等待路线详情核心内容稳定，避免地图容器先出现但路线数据未完成加载。"""
+        deadline = time.time() + timeout
+        stable_rounds = 0
+        latest_state = "未检测到路线详情页"
+
+        while time.time() < deadline:
+            map_view = self.driver.wait_for_component(
+                BY.xpath(self.MAP_VIEW_XPATH),
+                timeout=0.4,
+            )
+            overview_title = self.driver.wait_for_component(
+                BY.xpath(self.overview_title_xpath(route_name)),
+                timeout=0.4,
+            )
+            bottom_panel = self.driver.wait_for_component(
+                BY.xpath(self.BOTTOM_PANEL_XPATH),
+                timeout=0.2,
+            )
+            action_button = self.driver.wait_for_component(
+                BY.xpath(
+                    f"{self.ROUTE_ONE_CLICK_PLAY_BUTTON_XPATH} | "
+                    f"{self.ROUTE_JOIN_TRIP_BUTTON_XPATH}"
+                ),
+                timeout=0.2,
+            )
+            loading = self.driver.wait_for_component(
+                BY.xpath(self.ROUTE_MAP_LOADING_XPATH),
+                timeout=0.2,
+            )
+
+            if (
+                map_view is not None
+                and overview_title is not None
+                and bottom_panel is not None
+                and action_button is not None
+                and loading is None
+            ):
+                stable_rounds += 1
+                if stable_rounds >= 2:
+                    return {
+                        "map": map_view,
+                        "overview_title": overview_title,
+                    }
+                latest_state = "路线详情核心内容已出现，等待连续稳定"
+            else:
+                stable_rounds = 0
+                visible_overview = self.driver.wait_for_component(
+                    BY.xpath(
+                        '//*[@id="mapPageRoot"]//Text[contains(@text, "·概览")]'
+                        ' | //*[@id="mapPageRoot"]//Text[contains(@text, "· 概览")]'
+                    ),
+                    timeout=0.2,
+                )
+                visible_title = ""
+                if visible_overview is not None:
+                    visible_title = visible_overview.getText() or ""
+                latest_state = (
+                    f"map={map_view is not None}, "
+                    f"目标概览={overview_title is not None}, "
+                    f"底部面板={bottom_panel is not None}, "
+                    f"操作按钮={action_button is not None}, "
+                    f"加载中={loading is not None}, "
+                    f"当前概览标题={visible_title}"
+                )
+            time.sleep(0.4)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 路线详情“{route_name}”未加载稳定，"
+            f"最后状态：{latest_state}"
+        )
 
     def wait_overview_modules(self, *, timeout: float = 8) -> None:
         """Verify overview highlights, key spots, and itinerary modules."""
@@ -525,12 +607,7 @@ class RouteDetailPage(BasePage):
 
     def wait_generic_route_loaded(self, route_name: str, *, timeout: float = 12) -> None:
         """等待任意热门路线详情页加载完成。"""
-        ready_xpath = (
-            '//*[@id="mapPageRoot" '
-            'and .//*[@id="mapview"] '
-            f'and .//Text[@text="{route_name}\u00b7\u6982\u89c8"] '
-            'and .//*[@id="copyPlanBtn"]]'
-        )
+        ready_xpath = self.route_content_ready_xpath(route_name)
         self.wait_xpath(ready_xpath, f"热门路线详情页{route_name}", timeout=timeout)
 
     def wait_surrounding_poi_list(self, *, timeout: float = 8) -> None:
@@ -606,37 +683,79 @@ class RouteDetailPage(BasePage):
     def tap_back_button(self) -> None:
         """点击路线详情页内返回按钮。"""
         self.tap_xpath(self.BACK_BUTTON_XPATH, "路线详情返回按钮")
+        time.sleep(1.5)
 
     def tap_join_trip(self, *, timeout: float = 8) -> None:
         """点击路线详情底部按钮，将路线创建为行程。"""
-        loading = self.driver.wait_for_component(
-            BY.xpath(self.ROUTE_MAP_LOADING_XPATH),
-            timeout=min(2.0, timeout),
+        self._wait_route_map_loading_done(
+            timeout=max(timeout, 45),
+            action_name="加入我的行程",
         )
-        if loading is not None:
-            self.driver.wait_for_component_disappear(
-                BY.xpath(self.ROUTE_MAP_LOADING_XPATH),
-                timeout=max(timeout, 15),
-            )
-            if self.driver.wait_for_component(
-                BY.xpath(self.ROUTE_MAP_LOADING_XPATH),
-                timeout=0.5,
-            ) is not None:
-                raise RuntimeError("路线地图仍在加载，暂不能加入我的行程")
         self.tap_xpath(
             self.ROUTE_JOIN_TRIP_BUTTON_XPATH,
             "路线详情加入行程按钮",
             timeout=timeout,
         )
 
+    def _wait_route_map_loading_done(
+        self,
+        *,
+        timeout: float = 8,
+        action_name: str = "操作路线",
+    ) -> None:
+        """路线地图加载完成后再点击底部操作，避免全量执行时过早点击。"""
+        deadline = time.time() + timeout
+        stable_ready_rounds = 0
+        latest_state = "未检测到路线详情可操作区"
+
+        while time.time() < deadline:
+            loading = self.driver.wait_for_component(
+                BY.xpath(self.ROUTE_MAP_LOADING_XPATH),
+                timeout=0.3,
+            )
+            route_title = self.find_xpath(
+                '//*[@id="mapPageRoot"]//Text[contains(@text, "\u00b7\u6982\u89c8")]'
+            )
+            if route_title is not None:
+                route_name = (route_title.getText() or "").replace("\u00b7\u6982\u89c8", "")
+                ready_xpath = self.route_content_ready_xpath(route_name)
+            else:
+                ready_xpath = self.ROUTE_ACTION_READY_XPATH
+
+            action_ready = self.driver.wait_for_component(
+                BY.xpath(ready_xpath),
+                timeout=0.3,
+            )
+            if loading is None and action_ready is not None:
+                stable_ready_rounds += 1
+                if stable_ready_rounds >= 3:
+                    return
+                latest_state = "路线内容和操作区已出现，等待连续稳定"
+            else:
+                stable_ready_rounds = 0
+                latest_state = (
+                    "路线仍显示加载中"
+                    if loading is not None
+                    else "路线操作区未完整出现"
+                )
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            f"路线地图加载未完成，暂不能{action_name}，最后状态：{latest_state}"
+        )
+
     def tap_one_click_play(self, *, timeout: float = 8) -> None:
         """点击路线详情底部按钮进入游玩模式。"""
+        self._wait_route_map_loading_done(
+            timeout=max(timeout, 30),
+            action_name="进入游玩模式",
+        )
         self.tap_xpath(
             self.ROUTE_ONE_CLICK_PLAY_BUTTON_XPATH,
             "路线详情一键跟玩按钮",
             timeout=timeout,
         )
-        self.wait_play_mode_overview(timeout=timeout)
+        self.wait_play_mode_map_and_drawer(timeout=max(timeout, 15))
 
     def wait_play_mode_overview(self, *, timeout: float = 8) -> None:
         """Verify play mode renders the overview map and core controls."""

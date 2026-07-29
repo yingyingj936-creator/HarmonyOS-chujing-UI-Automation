@@ -31,11 +31,11 @@ def test_search_scope_updates_with_destination(driver) -> None:
     with allure.step("步骤1：在中国香港首页点击搜索框"):
         search_page.tap_home_search()
 
-    with allure.step("步骤2：校验搜索框提示为“在中国香港中搜索”"):
+    with allure.step("步骤2：校验搜索框展示目的地提示或 AI 推荐词"):
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(search_page.placeholder_xpath("中国香港")),
-            "搜索框提示-在中国香港中搜索",
+            BY.xpath(search_page.search_start_input_xpath("中国香港")),
+            "搜索框-中国香港范围或AI推荐词",
             timeout=8,
             attach_crop=False,
         )
@@ -81,11 +81,11 @@ def test_search_scope_updates_with_destination(driver) -> None:
     with allure.step("步骤6：在泰国首页点击搜索框"):
         search_page.tap_home_search()
 
-    with allure.step("步骤7：校验搜索框提示为“在泰国中搜索”"):
+    with allure.step("步骤7：校验搜索框展示目的地提示或 AI 推荐词"):
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(search_page.placeholder_xpath("泰国")),
-            "搜索框提示-在泰国中搜索",
+            BY.xpath(search_page.search_start_input_xpath("泰国")),
+            "搜索框-泰国范围或AI推荐词",
             timeout=8,
             attach_crop=False,
         )

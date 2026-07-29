@@ -99,9 +99,7 @@ def test_trip_edit_add_day3_and_poi(driver) -> None:
             day3_tab.getBounds(),
             "编辑行程页新增Day3 Tab",
         )
-        trip_edit.tap_day_3_tab(timeout=8)
-        trip_edit.wait_day_3_empty_loaded(timeout=10)
-        add_place_entry = trip_edit.child_add_place_entry(timeout=8)
+        add_place_entry = trip_edit.switch_to_day_3_empty(timeout=12)
         attach_highlighted_bounds(
             driver,
             add_place_entry.getBounds(),
@@ -109,7 +107,7 @@ def test_trip_edit_add_day3_and_poi(driver) -> None:
         )
 
     with allure.step("步骤3：点击添加地点/活动按钮，输入“太古”，展示相关搜索结果"):
-        trip_edit.tap_child_add_place_entry(timeout=8)
+        trip_edit.tap_day_3_add_place_entry(timeout=8)
         search_input = trip_edit.input_add_poi_keyword(SEARCH_KEYWORD, timeout=8)
         attach_highlighted_bounds(
             driver,
@@ -124,10 +122,8 @@ def test_trip_edit_add_day3_and_poi(driver) -> None:
         )
 
     with allure.step("步骤4：点击“太古广场”，校验 Day3 新增该 POI 点"):
-        trip_edit.tap_add_poi_search_result(TARGET_POI, timeout=8)
-        added_poi = trip_edit.scroll_child_list_until_poi_visible(
+        added_poi = trip_edit.tap_add_poi_search_result_and_wait_added(
             TARGET_POI,
-            max_swipes=6,
             timeout=10,
         )
         attach_highlighted_bounds(
@@ -143,7 +139,7 @@ def test_trip_edit_add_day3_and_poi(driver) -> None:
             complete.getBounds(),
             "编辑行程页编辑完成按钮",
         )
-        complete.click()
+        trip_edit.tap_edit_complete(timeout=10)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
 
         day3_detail = trip_detail.scroll_until_xpath_visible(

@@ -41,9 +41,9 @@ def _ensure_history_keyword(
 
 
 @allure.feature("搜索功能")
-@allure.story("搜索启动页榜单、历史词与清除操作")
+@allure.story("搜索启动页模块、大家都在搜、榜单、历史词与清除操作")
 def test_search_start_page_poi_history_and_clear(driver) -> None:
-    """验证搜索启动页榜单 POI、搜索历史及输入框清除流程。"""
+    """验证搜索启动页模块、大家都在搜热词、榜单 POI、搜索历史及清除流程。"""
     home_page = OutboundHomePage(driver)
     search_page = OutboundSearchPage(driver)
     poi_detail_page = PoiDetailPage(driver)
@@ -73,20 +73,25 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
         search_page.tap_home_search()
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(search_page.placeholder_xpath("中国香港")),
-            "搜索启动页-搜索框",
+            BY.xpath(search_page.search_start_input_xpath("中国香港")),
+            "搜索启动页-搜索框或AI推荐词",
             timeout=8,
             attach_crop=False,
         )
 
-    with allure.step("步骤2：查看搜索历史和榜单模块"):
+    with allure.step("步骤2：查看搜索启动页页面内容"):
+        search_page.wait_search_start_loaded(timeout=8)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(search_page.SEARCH_HISTORY_TITLE_XPATH),
-            "搜索启动页-搜索历史",
+            BY.xpath(search_page.EVERYONE_SEARCHING_TITLE_XPATH),
+            "搜索启动页-大家都在搜",
             timeout=8,
             attach_crop=False,
         )
+        assert driver.wait_for_component(
+            BY.xpath(search_page.SEARCH_HISTORY_TITLE_XPATH),
+            timeout=8,
+        ), "搜索启动页未展示搜索历史模块"
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(search_page.PLAY_RANKING_TITLE_XPATH),
@@ -95,7 +100,61 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：点击榜单地点“太平山顶”，进入对应详情页"):
+    with allure.step("步骤3：点击“大家都在搜”模块中的任意 AI 推荐词，进入对应搜索结果页"):
+        keyword, _ = search_page.first_everyone_searching_keyword(timeout=8)
+        allure.attach(
+            keyword,
+            name="本次点击的大家都在搜AI推荐词",
+            attachment_type=allure.attachment_type.TEXT,
+        )
+        search_page.tap_everyone_searching_keyword(keyword)
+        search_page.wait_result_loaded(timeout=10)
+        result_input = search_page.wait_result_keyword_filled(
+            keyword,
+            timeout=10,
+        )
+        assert search_page.wait_result_has_visible_content(timeout=10), (
+            f"点击“大家都在搜”词“{keyword}”后，搜索结果页没有结果内容"
+        )
+        assert driver.wait_for_component(BY.text("暂无结果"), timeout=1) is None, (
+            f"点击“大家都在搜”词“{keyword}”后出现空结果"
+        )
+        assert driver.wait_for_component(BY.text("加载失败"), timeout=1) is None, (
+            f"点击“大家都在搜”词“{keyword}”后出现加载失败"
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            result_input,
+            f"大家都在搜搜索结果-{keyword}",
+            timeout=8,
+            attach_crop=False,
+        )
+
+    with allure.step("步骤4：点击搜索框右侧“×”清除按钮，返回搜索启动页"):
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(search_page.CLEAR_INPUT_BUTTON_XPATH),
+            "大家都在搜结果页-搜索框清除按钮",
+            timeout=8,
+            attach_crop=False,
+        )
+        search_page.tap_clear_input()
+        assert driver.wait_for_component(
+            BY.xpath(search_page.SEARCH_HISTORY_TITLE_XPATH),
+            timeout=8,
+        ), "清除大家都在搜搜索词后，未返回搜索启动页"
+        assert driver.wait_for_component(
+            BY.xpath(search_page.EVERYONE_SEARCHING_TITLE_XPATH),
+            timeout=8,
+        ), "清除大家都在搜搜索词后，未重新展示大家都在搜模块"
+        assert driver.wait_for_component(
+            BY.xpath(search_page.PLAY_RANKING_TITLE_XPATH),
+            timeout=8,
+        ), "清除大家都在搜搜索词后，未重新展示榜单模块"
+
+    with allure.step("步骤5：点击榜单 POI 点“太平山顶”，进入对应详情页"):
+        search_page.dismiss_keyboard()
+        search_page.scroll_ranking_poi_into_view("太平山顶")
         search_page.tap_ranking_poi("太平山顶")
         assert_visible_and_attach_highlight(
             driver,
@@ -105,17 +164,12 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3.1：点击地点详情页内返回按钮，返回搜索启动页"):
+    with allure.step("步骤6：返回搜索启动页后，点击搜索历史词并进入搜索结果页"):
         poi_detail_page.tap_back_button("太平山顶")
-        assert_visible_and_attach_highlight(
-            driver,
+        assert driver.wait_for_component(
             BY.xpath(search_page.SEARCH_HISTORY_TITLE_XPATH),
-            "返回搜索启动页-搜索历史",
             timeout=8,
-            attach_crop=False,
-        )
-
-    with allure.step("步骤4：点击历史词“香港”，自动填充并进入搜索结果页"):
+        ), "从太平山顶详情返回后，未回到搜索启动页"
         search_page.tap_history_keyword("香港")
         assert_visible_and_attach_highlight(
             driver,
@@ -132,7 +186,7 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤5：点击搜索框清除按钮，回到搜索启动页"):
+    with allure.step("步骤7：点击搜索框右侧“×”清除按钮，回到搜索启动页"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(search_page.CLEAR_INPUT_BUTTON_XPATH),
@@ -141,10 +195,18 @@ def test_search_start_page_poi_history_and_clear(driver) -> None:
             attach_crop=False,
         )
         search_page.tap_clear_input()
+        assert driver.wait_for_component(
+            BY.xpath(search_page.EVERYONE_SEARCHING_TITLE_XPATH),
+            timeout=8,
+        ), "清除搜索历史词后，未重新展示大家都在搜模块"
+        assert driver.wait_for_component(
+            BY.xpath(search_page.PLAY_RANKING_TITLE_XPATH),
+            timeout=8,
+        ), "清除搜索历史词后，未重新展示榜单模块"
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(search_page.placeholder_xpath("中国香港")),
-            "清除后搜索框",
+            BY.xpath(search_page.search_start_input_xpath("中国香港")),
+            "清除后搜索框或AI推荐词",
             timeout=8,
             attach_crop=False,
         )

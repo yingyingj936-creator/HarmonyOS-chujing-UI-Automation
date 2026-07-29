@@ -1,5 +1,4 @@
 import allure
-import time
 from hypium import BY
 
 from pages.outbound_home import OutboundHomePage
@@ -66,13 +65,37 @@ def test_home_guide_like_persists_after_restart(
                 timeout=8,
                 attach_crop=False,
             )
-            time.sleep(3)
+            detail.tap_back_button()
+            home.find_guide_in_feed(target_post_id)
+            home.wait_guide_like_state(
+                target_post_id,
+                expected_count=liked_count,
+                expected_liked=True,
+                timeout=25,
+                stable_rounds=3,
+            )
 
         with allure.step("步骤3：杀掉进程并重开出境服务，校验点赞状态保持"):
             restart_outbound_service()
             home.find_guide_in_feed(target_post_id)
-            actual_count = home.guide_like_count(target_post_id)
-            actual_liked = home.is_guide_liked(target_post_id)
+            actual_count, actual_liked = home.wait_guide_like_state(
+                target_post_id,
+                expected_count=liked_count,
+                expected_liked=True,
+                timeout=25,
+                stable_rounds=2,
+            )
+            allure.attach(
+                (
+                    f"帖子ID：{target_post_id}\n"
+                    f"点赞前数量：{original_count}\n"
+                    f"首次点赞后数量：{liked_count}\n"
+                    f"重启后数量：{actual_count}\n"
+                    f"重启后是否高亮：{actual_liked}"
+                ),
+                name="点赞持久化校验数据",
+                attachment_type=allure.attachment_type.TEXT,
+            )
             assert_visible_and_attach_highlight(
                 driver,
                 BY.xpath(home.guide_like_row_xpath(target_post_id)),

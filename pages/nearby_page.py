@@ -6,6 +6,7 @@ from typing import Any
 from hypium import BY
 
 from pages.base_page import BasePage
+from utils.ui_snapshot import UiSnapshot
 
 
 @dataclass(frozen=True)
@@ -142,7 +143,8 @@ class NearbyPage(BasePage):
         """读取附近页左上角当前地区，避免固定写死目的地。"""
         deadline = time.time() + timeout
         while time.time() < deadline:
-            root = self.cached_xpath(self.ROOT_XPATH, max_age_seconds=30)
+            snapshot = UiSnapshot(self.driver).capture()
+            root = snapshot.find_xpath(self.ROOT_XPATH)
             if root is None:
                 time.sleep(0.3)
                 continue
@@ -155,9 +157,7 @@ class NearbyPage(BasePage):
             max_left = root_left + int(root_width * 0.32)
             max_top = root_top + int(root_height * 0.12)
 
-            components = self.driver.find_all_components(
-                BY.xpath(f"{self.ROOT_XPATH}//Text")
-            )
+            components = snapshot.find_all_xpath(f"{self.ROOT_XPATH}//Text")
             for component in self._as_list(components):
                 if not self._is_visible(component):
                     continue
@@ -228,13 +228,14 @@ class NearbyPage(BasePage):
         last_visible_categories: tuple[str, ...] = ()
 
         while time.time() < deadline:
-            category_text = self.visible_left_category_text(category_name)
+            category_text, last_visible_categories = self._left_category_snapshot(
+                category_name
+            )
             if category_text is not None:
                 self._click_component_center(category_text)
                 time.sleep(0.8)
                 return
 
-            last_visible_categories = self.visible_left_category_names()
             self._swipe_left_category_rail_up()
             time.sleep(0.5)
 
@@ -245,24 +246,85 @@ class NearbyPage(BasePage):
 
     def visible_left_category_text(self, category_name: str) -> Any | None:
         """返回左侧分类栏内当前可见且未被底部导航遮挡的指定文字节点。"""
-        components = self.driver.find_all_components(
-            BY.xpath(self.category_text_xpath(category_name))
-        )
-        candidates = self._visible_left_rail_components(components)
-        if not candidates:
-            return None
-        return sorted(candidates, key=lambda item: (item[0], item[1]))[0][2]
+        component, _ = self._left_category_snapshot(category_name)
+        return component
 
     def visible_left_category_names(self) -> tuple[str, ...]:
         """读取当前屏幕左侧分类栏内可见分类名，用于报告和失败诊断。"""
-        components = self.driver.find_all_components(BY.xpath(f"{self.ROOT_XPATH}//Text"))
-        candidates = self._visible_left_rail_components(components)
+        _, names = self._left_category_snapshot()
+        return names
+
+    def _left_category_snapshot(
+        self,
+        category_name: str | None = None,
+    ) -> tuple[Any | None, tuple[str, ...]]:
+        """一次 UI 快照内完成左侧分类目标查找和当前可见分类读取。"""
+        snapshot = UiSnapshot(self.driver).capture()
+        root = snapshot.find_xpath(self.ROOT_XPATH)
+        if root is None:
+            return None, ()
+
+        bottom_navigation = snapshot.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        bottom_limit = 10**9
+        if bottom_navigation is not None and self._is_visible(bottom_navigation):
+            bottom_limit = int(bottom_navigation.getBounds().top) - 8
+
+        components = snapshot.find_all_xpath(f"{self.ROOT_XPATH}//Text")
+        candidates = self._visible_left_rail_components_in_bounds(
+            components,
+            root=root,
+            bottom_limit=bottom_limit,
+        )
         names: list[str] = []
-        for _, _, component in sorted(candidates, key=lambda item: (item[0], item[1])):
+        target_candidates: list[tuple[int, int, Any]] = []
+        for top, left, component in sorted(candidates, key=lambda item: (item[0], item[1])):
             text = component.getText().strip()
             if text and text not in names:
                 names.append(text)
-        return tuple(names)
+            if category_name is not None and text == category_name:
+                target_candidates.append((top, left, component))
+
+        target = None
+        if target_candidates:
+            target_candidates.sort(key=lambda item: (item[0], item[1]))
+            target = target_candidates[0][2]
+        return target, tuple(names)
+
+    def _visible_left_rail_components_in_bounds(
+        self,
+        components: Any,
+        *,
+        root: Any,
+        bottom_limit: int,
+    ) -> list[tuple[int, int, Any]]:
+        root_bounds = root.getBounds()
+        root_left = int(root_bounds.left)
+        root_top = int(root_bounds.top)
+        root_right = int(root_bounds.right)
+        root_bottom = int(root_bounds.bottom)
+        root_width = root_right - root_left
+        left_rail_right = root_left + int(root_width * 0.35)
+        effective_bottom_limit = min(root_bottom, bottom_limit)
+
+        candidates: list[tuple[int, int, Any]] = []
+        for component in self._as_list(components):
+            if not self._is_visible(component):
+                continue
+
+            bounds = component.getBounds()
+            left = int(bounds.left)
+            top = int(bounds.top)
+            right = int(bounds.right)
+            bottom = int(bounds.bottom)
+            center_y = (top + bottom) // 2
+
+            if left < root_left or right > left_rail_right:
+                continue
+            if top < root_top or center_y >= effective_bottom_limit:
+                continue
+
+            candidates.append((top, left, component))
+        return candidates
 
     def _visible_left_rail_components(
         self,
@@ -361,21 +423,46 @@ class NearbyPage(BasePage):
 
     def visible_poi_text_component(self, poi_name: str) -> Any | None:
         """返回附近 POI 列表中当前可见的指定 POI 文本节点。"""
-        components = self.driver.find_all_components(BY.xpath(self.poi_text_xpath(poi_name)))
-        candidates: list[tuple[int, int, Any]] = []
-        bottom_limit = self._bottom_navigation_top() - 8
+        component, _, _ = self._poi_list_snapshot(poi_name)
+        return component
+
+    def _poi_list_snapshot(
+        self,
+        poi_name: str | None = None,
+    ) -> tuple[Any | None, tuple[str, ...], Any | None]:
+        """一次 UI 快照内读取 POI 列表容器、可见 POI 名称和目标 POI。"""
+        snapshot = UiSnapshot(self.driver).capture()
+        bottom_navigation = snapshot.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+        bottom_limit = 10**9
+        if bottom_navigation is not None and self._is_visible(bottom_navigation):
+            bottom_limit = int(bottom_navigation.getBounds().top) - 8
+
+        components = snapshot.find_all_xpath(self.POI_LIST_TEXT_XPATH)
+        poi_list = snapshot.find_xpath(self.POI_LIST_XPATH)
+        names: list[str] = []
+        target_candidates: list[tuple[int, int, Any]] = []
+        seen: set[str] = set()
         for component in self._as_list(components):
             if not self._is_visible(component):
+                continue
+            text = component.getText().strip()
+            if not self._is_poi_name(text):
                 continue
             bounds = component.getBounds()
             center_y = (int(bounds.top) + int(bounds.bottom)) // 2
             if center_y >= bottom_limit:
                 continue
-            candidates.append((int(bounds.top), int(bounds.left), component))
-        if not candidates:
-            return None
-        candidates.sort(key=lambda item: (item[0], item[1]))
-        return candidates[0][2]
+            if text not in seen:
+                names.append(text)
+                seen.add(text)
+            if poi_name is not None and text == poi_name:
+                target_candidates.append((int(bounds.top), int(bounds.left), component))
+
+        target = None
+        if target_candidates:
+            target_candidates.sort(key=lambda item: (item[0], item[1]))
+            target = target_candidates[0][2]
+        return target, tuple(names), poi_list
 
     def first_visible_poi_text_component(
         self,
@@ -386,9 +473,14 @@ class NearbyPage(BasePage):
         deadline = time.time() + timeout
         last_names: tuple[str, ...] = ()
         while time.time() < deadline:
-            components = self.driver.find_all_components(BY.xpath(self.POI_LIST_TEXT_XPATH))
+            snapshot = UiSnapshot(self.driver).capture()
+            components = snapshot.find_all_xpath(self.POI_LIST_TEXT_XPATH)
             candidates: list[tuple[int, int, str, Any]] = []
-            bottom_limit = self._bottom_navigation_top() - 8
+            bottom_navigation = snapshot.find_xpath(self.BOTTOM_NAV_ROOT_XPATH)
+            bottom_limit = 10**9
+            if bottom_navigation is not None and self._is_visible(bottom_navigation):
+                bottom_limit = int(bottom_navigation.getBounds().top) - 8
+            names: list[str] = []
             for component in self._as_list(components):
                 if not self._is_visible(component):
                     continue
@@ -400,13 +492,15 @@ class NearbyPage(BasePage):
                 if center_y >= bottom_limit:
                     continue
                 candidates.append((int(bounds.top), int(bounds.left), text, component))
+                if text not in names:
+                    names.append(text)
 
             if candidates:
                 candidates.sort(key=lambda item: (item[0], item[1]))
                 _, _, name, component = candidates[0]
                 return name, component
 
-            last_names = self.visible_poi_names()
+            last_names = tuple(names)
             time.sleep(0.4)
 
         raise RuntimeError(
@@ -423,14 +517,12 @@ class NearbyPage(BasePage):
         """滚动附近 POI 列表，直到指定 POI 进入可见区域。"""
         visible_names: tuple[str, ...] = ()
         for swipe_index in range(max_swipes + 1):
-            component = self.visible_poi_text_component(poi_name)
+            component, visible_names, poi_list = self._poi_list_snapshot(poi_name)
             if component is not None:
                 return component
-            visible_names = self.visible_poi_names()
             if swipe_index == max_swipes:
                 break
 
-            poi_list = self.find_xpath(self.POI_LIST_XPATH)
             if poi_list is not None and self._is_visible(poi_list):
                 self.driver.swipe("UP", distance=65, area=poi_list, swipe_time=0.55)
             else:
@@ -811,15 +903,8 @@ class NearbyPage(BasePage):
 
     def visible_poi_names(self) -> tuple[str, ...]:
         """读取当前可见的附近 POI 名称。"""
-        components = self.driver.find_all_components(BY.xpath(self.POI_LIST_TEXT_XPATH))
-        names: list[str] = []
-        for component in self._as_list(components):
-            if not self._is_visible(component):
-                continue
-            text = component.getText().strip()
-            if self._is_poi_name(text) and text not in names:
-                names.append(text)
-        return tuple(names)
+        _, names, _ = self._poi_list_snapshot()
+        return names
 
     def wait_poi_names_loaded(
         self,

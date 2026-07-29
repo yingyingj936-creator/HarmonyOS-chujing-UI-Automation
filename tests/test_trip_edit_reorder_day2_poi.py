@@ -176,7 +176,7 @@ def test_trip_edit_reorder_day2_first_poi_below_second(driver) -> None:
             complete.getBounds(),
             "编辑行程页编辑完成按钮",
         )
-        complete.click()
+        trip_edit.tap_edit_complete(timeout=10)
         trip_detail.wait_loaded(TRIP_NAME, timeout=12)
         _assert_detail_day2_order(
             trip_detail,

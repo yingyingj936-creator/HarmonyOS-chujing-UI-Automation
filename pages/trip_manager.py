@@ -3,6 +3,8 @@ import time
 from hypium import BY
 
 from pages.base_page import BasePage
+from utils.component_cache import invalidate_component_cache
+from utils.ui_snapshot import UiSnapshot
 
 
 class TripManagerPage(BasePage):
@@ -71,7 +73,7 @@ class TripManagerPage(BasePage):
 
     def _visible_xpath(self, xpath: str):
         """返回有有效可见区域的组件，过滤列表保留的离屏节点。"""
-        component = self.find_xpath(xpath)
+        component = self.cached_xpath(xpath, max_age_seconds=3)
         if component is None:
             return None
         left, top, right, bottom = self._bounds_tuple(component)
@@ -166,6 +168,7 @@ class TripManagerPage(BasePage):
                 (int(bounds.top) + int(bounds.bottom)) // 2,
             )
         )
+        invalidate_component_cache(self.driver)
 
     def tap_hot_route_reference(self, *, timeout: float = 8) -> None:
         """点击“参考热门路线修改”入口。"""
@@ -220,44 +223,48 @@ class TripManagerPage(BasePage):
         max_swipes: int = 12,
         trip_list=None,
     ) -> None:
-        """恢复到行程页顶部创建区域，兼容页面保留上次滚动位置。"""
-        if trip_list is None:
-            trip_list = self.wait_xpath(
-                self.TRIP_LIST_XPATH,
-                "行程页滚动列表",
-            )
+        """Return to the create-trip area at the top of Trip page."""
         for swipe_count in range(max_swipes + 1):
-            if self._has_visible_xpath(self.TOP_AREA_MARKER_XPATH):
+            snapshot = UiSnapshot(self.driver).capture()
+            if snapshot.find_xpath(self.TOP_AREA_MARKER_XPATH) is not None:
                 return
             if swipe_count == max_swipes:
                 break
+            if trip_list is None:
+                trip_list = snapshot.find_xpath(self.TRIP_LIST_XPATH)
+                if trip_list is None:
+                    trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "DOWN",
                 distance=70,
                 area=trip_list,
             )
+            invalidate_component_cache(self.driver)
             time.sleep(0.35)
-        raise RuntimeError(f"[{self.PAGE_NAME}] 未回到行程页创建区域")
+        raise RuntimeError(f"[{self.PAGE_NAME}] create-trip area is not visible")
 
     def scroll_to_my_trips_area(self, *, max_swipes: int = 6) -> None:
-        """滚动到我的行程区域。"""
-        trip_list = self.wait_xpath(
-            self.TRIP_LIST_XPATH,
-            "行程页滚动列表",
-        )
+        """Scroll to the My Trips area."""
+        trip_list = None
         for swipe_count in range(max_swipes + 1):
-            if self.find_xpath(self.MY_TRIPS_AREA_MARKER_XPATH) is not None:
+            snapshot = UiSnapshot(self.driver).capture()
+            if snapshot.find_xpath(self.MY_TRIPS_AREA_MARKER_XPATH) is not None:
                 return
             if swipe_count == max_swipes:
                 break
+            if trip_list is None:
+                trip_list = snapshot.find_xpath(self.TRIP_LIST_XPATH)
+                if trip_list is None:
+                    trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "UP",
                 distance=45,
                 area=trip_list,
             )
+            invalidate_component_cache(self.driver)
             time.sleep(0.5)
 
-        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到我的行程区域")
+        raise RuntimeError(f"[{self.PAGE_NAME}] My Trips area is not visible")
 
     def scroll_to_trip_card_with_required_fields(
         self,
@@ -272,28 +279,29 @@ class TripManagerPage(BasePage):
         *,
         max_swipes: int = 8,
     ) -> object:
-        """返回可见的字段完整行程卡片。"""
+        """Return a visible trip card with required summary fields."""
         self.scroll_to_my_trips_area(max_swipes=max_swipes)
-        trip_list = self.wait_xpath(
-            self.TRIP_LIST_XPATH,
-            "行程页滚动列表",
-        )
+        trip_list = None
         for swipe_count in range(max_swipes + 1):
-            trip_card = self.find_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
+            snapshot = UiSnapshot(self.driver).capture()
+            trip_card = snapshot.find_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
             if trip_card is not None:
                 return trip_card
             if swipe_count == max_swipes:
                 break
+            if trip_list is None:
+                trip_list = snapshot.find_xpath(self.TRIP_LIST_XPATH)
+                if trip_list is None:
+                    trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "UP",
                 distance=35,
                 area=trip_list,
             )
+            invalidate_component_cache(self.driver)
             time.sleep(0.5)
 
-        raise RuntimeError(
-            f"[{self.PAGE_NAME}] 我的行程列表未找到字段完整的行程卡片"
-        )
+        raise RuntimeError(f"[{self.PAGE_NAME}] no visible trip card with required fields")
 
     def visible_trip_cards_with_titles(self, *, max_swipes: int = 8) -> list[tuple]:
         """返回当前我的行程可见区域内的行程卡片及标题，按从上到下排序。"""
@@ -302,15 +310,12 @@ class TripManagerPage(BasePage):
 
     def current_visible_trip_cards_with_titles(self) -> list[tuple]:
         """读取当前屏幕内已展示的行程卡片及标题，不额外滚动。"""
+        snapshot = UiSnapshot(self.driver).capture()
         cards = self._as_list(
-            self.driver.find_all_components(
-                self._xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
-            )
+            snapshot.find_all_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
         )
         text_components = self._as_list(
-            self.driver.find_all_components(
-                self._xpath('//*[@scrollable="true"]//Text')
-            )
+            snapshot.find_all_xpath('//*[@scrollable="true"]//Text')
         )
 
         card_infos = []
@@ -348,11 +353,44 @@ class TripManagerPage(BasePage):
         """长按当前可见的字段完整行程卡片。"""
         trip_card = self.wait_trip_card_with_required_fields(max_swipes=8)
         self.driver.long_click(trip_card, press_time=press_time)
+        invalidate_component_cache(self.driver)
         return trip_card
 
     def long_press_trip_card(self, trip_card, *, press_time: float = 2.0) -> None:
         """长按指定行程卡片。"""
         self.driver.long_click(trip_card, press_time=press_time)
+        invalidate_component_cache(self.driver)
+
+    def long_press_trip_card_until_menu(
+        self,
+        trip_card,
+        *,
+        trip_name: str | None = None,
+        press_time: float = 2.0,
+        attempts: int = 3,
+    ) -> None:
+        """长按行程卡片直到编辑菜单出现；失败时重新定位卡片再重试。"""
+        last_error: Exception | None = None
+        current_card = trip_card
+        for attempt in range(attempts):
+            self.driver.long_click(current_card, press_time=press_time)
+            invalidate_component_cache(self.driver)
+            try:
+                self.wait_edit_trip_menu_loaded(timeout=3)
+                return
+            except RuntimeError as error:
+                last_error = error
+                if trip_name:
+                    current_card = self.scroll_trip_into_view(
+                        trip_name,
+                        max_swipes=6,
+                    )
+                time.sleep(0.5)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 长按行程卡片后未弹出编辑菜单，"
+            f"目标行程={trip_name!r}，最后错误={last_error}"
+        )
 
     def wait_edit_trip_menu_loaded(self, *, timeout: float = 8) -> None:
         """等待行程长按后的编辑菜单展示完整。"""
@@ -367,6 +405,7 @@ class TripManagerPage(BasePage):
         """点击编辑行程底部菜单关闭按钮。"""
         left, top, right, bottom = self.edit_menu_close_bounds(timeout=timeout)
         self.driver.click(((left + right) // 2, (top + bottom) // 2))
+        invalidate_component_cache(self.driver)
 
     def tap_pin_trip_action(self, *, timeout: float = 8) -> None:
         """点击编辑菜单中的“置顶该行程”。"""
@@ -539,6 +578,7 @@ class TripManagerPage(BasePage):
                 distance=50,
                 area=trip_list,
             )
+            invalidate_component_cache(self.driver)
             time.sleep(0.4)
 
         raise RuntimeError(
@@ -558,5 +598,6 @@ class TripManagerPage(BasePage):
             area=trip_list,
             start_point=(0.5, 0.3),
         )
+        invalidate_component_cache(self.driver)
         time.sleep(2)
 

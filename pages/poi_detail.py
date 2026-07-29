@@ -56,6 +56,18 @@ class PoiDetailPage(BasePage):
         '//*[@id="direction_routes_result_start_navigation_button" '
         'or @text="路线" or @text="花瓣地图" or contains(@text, "路线")]'
     )
+    PETAL_MAP_TITLE_XPATH = (
+        '//Text[@id="title" and '
+        '(@text="花瓣地图" or @text="地图" or contains(@text, "Petal"))]'
+    )
+    PETAL_MAP_NAVIGATION_READY_XPATH_TEMPLATE = (
+        '//*[.//Text[@text="花瓣地图"] '
+        'and .//Text[contains(@text, {poi_name})] '
+        'and (.//Text[@text="我的位置"] '
+        'or .//Text[@text="驾车"] '
+        'or .//Text[contains(@text, "正在加载")] '
+        'or .//*[@id="direction_routes_result_start_navigation_button"])]'
+    )
     PETAL_MAP_MARK_XPATH = '//Text[@text="花瓣地图"]'
     RECOMMENDATION_TITLE_XPATH = '//Text[@text="相关推荐"]'
     RECOMMENDATION_LIST_XPATH = (
@@ -69,9 +81,30 @@ class PoiDetailPage(BasePage):
     def title_xpath(poi_name: str) -> str:
         return f'//Text[@text="{poi_name}"]'
 
+    @staticmethod
+    def _xpath_literal(value: str) -> str:
+        if '"' not in value:
+            return f'"{value}"'
+        if "'" not in value:
+            return f"'{value}'"
+        parts = value.split('"')
+        concat_parts = []
+        for index, part in enumerate(parts):
+            if part:
+                concat_parts.append(f'"{part}"')
+            if index != len(parts) - 1:
+                concat_parts.append("'\"'")
+        return "concat(" + ", ".join(concat_parts) + ")"
+
     @classmethod
     def back_button_xpath(cls, poi_name: str) -> str:
         return cls.BACK_BUTTON_XPATH_TEMPLATE.format(poi_name=poi_name)
+
+    @classmethod
+    def petal_map_navigation_ready_xpath(cls, poi_name: str) -> str:
+        return cls.PETAL_MAP_NAVIGATION_READY_XPATH_TEMPLATE.format(
+            poi_name=cls._xpath_literal(poi_name)
+        )
 
     def tap_back_button(self, poi_name: str) -> None:
         """点击 POI 详情页顶部栏的页面内返回按钮。"""
@@ -226,6 +259,39 @@ class PoiDetailPage(BasePage):
         """点击 POI 详情页右下角“导航”。"""
         self.tap_xpath(self.NAVIGATION_BUTTON_XPATH, "导航按钮")
         self._continue_task_limit_prompt_if_present()
+        time.sleep(1.5)
+        if self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is not None:
+            self.tap_xpath(self.NAVIGATION_BUTTON_XPATH, "导航按钮")
+            self._continue_task_limit_prompt_if_present()
+
+    def wait_petal_map_navigation_loaded(self, poi_name: str, *, timeout: float = 18):
+        """等待花瓣地图导航页首屏出现，不强依赖路线规划完全加载完成。"""
+        navigation_xpaths = (
+            self.petal_map_navigation_ready_xpath(poi_name),
+            self.MAP_START_NAVIGATION_XPATH,
+            self.PETAL_MAP_TITLE_XPATH,
+            self.MAP_ROUTE_PANEL_XPATH,
+        )
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            component = self.driver.wait_for_component(
+                BY.xpath(" | ".join(navigation_xpaths)),
+                timeout=1,
+            )
+            if component is not None:
+                return component
+
+            # 部分设备花瓣地图首屏不暴露固定“花瓣地图”文案；只要已离开
+            # POI 详情并出现服务标题，也视为跳端成功。
+            if self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is None:
+                title = self.find_xpath(self.SERVICE_TITLE_XPATH)
+                if title is not None:
+                    return title
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            f"[{self.PAGE_NAME}] 未找到花瓣地图导航页-{poi_name}，timeout={timeout}s"
+        )
 
     def tap_review_service(self) -> None:
         """点击 POI 详情页底部“看点评”。"""

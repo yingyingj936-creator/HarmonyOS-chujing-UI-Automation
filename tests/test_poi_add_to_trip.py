@@ -12,7 +12,7 @@ from pages.trip_manager import TripManagerPage
 from utils.allure_visual import assert_visible_and_attach_highlight
 
 
-TRIP_NAME = "榜单-POI点加入行程test"
+TRIP_NAME = "POI加行程test"
 POI_NAME = "旺角"
 
 

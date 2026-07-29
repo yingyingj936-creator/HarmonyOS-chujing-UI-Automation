@@ -17,16 +17,59 @@ def _return_to_mine(
     mine: MinePage,
 ) -> None:
     """从子页面返回“我的”页；优先返回键，兜底点底部导航。"""
-    for _ in range(4):
+    def is_mine_ready() -> bool:
         try:
             mine.wait_content_loaded(timeout=3)
-            return
+            mine.ensure_entry_area_visible(max_swipes=4)
+            return True
         except RuntimeError:
-            driver.press_back()
-            time.sleep(1.2)
+            return False
 
-    navigation.tap_mine()
+    def tap_top_left_back_if_present() -> bool:
+        components = driver.find_all_components(
+            BY.xpath('//Row[@clickable="true" and ./Image] | //Image[@clickable="true"]')
+        )
+        if components is None:
+            return False
+        if not isinstance(components, list):
+            components = [components]
+
+        candidates = []
+        for component in components:
+            bounds = component.getBounds()
+            left = int(bounds.left)
+            top = int(bounds.top)
+            right = int(bounds.right)
+            bottom = int(bounds.bottom)
+            if right <= left or bottom <= top:
+                continue
+            if left > 260 or top > 360:
+                continue
+            candidates.append((top, left, component))
+
+        if not candidates:
+            return False
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        candidates[0][2].click()
+        time.sleep(1.2)
+        return True
+
+    for _ in range(5):
+        if is_mine_ready():
+            return
+        if tap_top_left_back_if_present():
+            continue
+        driver.press_back()
+        time.sleep(1.2)
+
+    try:
+        navigation.tap_mine()
+    except Exception:
+        driver.press_back()
+        time.sleep(1.2)
+
     mine.wait_content_loaded(timeout=10)
+    mine.ensure_entry_area_visible(max_swipes=4)
 
 
 @allure.feature("出境服务")
@@ -67,7 +110,7 @@ def test_mine_page_layout_entries_and_feedback(driver) -> None:
         entry_names = ("我的订单", "优惠券", "联系人", "人工客服", "更多")
         for entry_name in entry_names:
             with allure.step(f"步骤3-{entry_name}：点击入口并校验对应页面"):
-                mine.ensure_entry_area_visible()
+                mine.ensure_entry_visible(entry_name)
                 assert_visible_and_attach_highlight(
                     driver,
                     BY.xpath(mine.mine_entry_xpath(entry_name)),
