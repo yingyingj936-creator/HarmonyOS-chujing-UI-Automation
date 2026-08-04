@@ -44,9 +44,13 @@ class PoiDetailPage(BasePage):
         '//Row[@clickable="true" and ./Text[@text="导航"]]'
     )
     REVIEW_BUTTON_XPATH = (
-        '//Row[@clickable="true" and ./Text[@text="看点评"]]'
+        '//Row[@clickable="true" and ./Text[@text="看点评" or @text="看评"]]'
     )
     SERVICE_TITLE_XPATH = '//Text[@id="title"]'
+    REVIEW_SERVICE_READY_XPATH = (
+        '//Text[@id="title"] | '
+        '//Text[contains(@text, "点评") or contains(@text, "评价") or contains(@text, "评论")]'
+    )
     BOOKING_TITLE_XPATH = '//Text[@id="title" and @text="Booking"]'
     TASK_LIMIT_CONTINUE_XPATH = '//Text[@text="继续"]'
     MAP_START_NAVIGATION_XPATH = (
@@ -161,14 +165,24 @@ class PoiDetailPage(BasePage):
 
     def wait_detail_loaded(self, poi_name: str, *, timeout: float = 10) -> None:
         """等待 POI 详情卡片加载完成。"""
-        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
-        self.wait_xpath(self.title_xpath(poi_name), f"POI详情标题-{poi_name}", timeout=timeout)
-        self.wait_xpath(self.RATING_XPATH, "POI详情评分", timeout=timeout)
+        self.snapshot_xpaths(
+            {
+                "root": (self.POI_DETAIL_ROOT_XPATH, "POI详情卡片"),
+                "title": (self.title_xpath(poi_name), f"POI详情标题-{poi_name}"),
+                "rating": (self.RATING_XPATH, "POI详情评分"),
+            },
+            timeout=timeout,
+        )
 
     def wait_detail_present(self, poi_name: str, *, timeout: float = 10) -> None:
         """等待 POI 详情仍处于打开状态，不要求评分等首屏字段当前可见。"""
-        self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片", timeout=timeout)
-        self.wait_xpath(self.title_xpath(poi_name), f"POI详情标题-{poi_name}", timeout=timeout)
+        self.snapshot_xpaths(
+            {
+                "root": (self.POI_DETAIL_ROOT_XPATH, "POI详情卡片"),
+                "title": (self.title_xpath(poi_name), f"POI详情标题-{poi_name}"),
+            },
+            timeout=timeout,
+        )
 
     def wait_gallery_visible(self, *, timeout: float = 8):
         """等待 POI 详情图集展示，兼容图集在不同容器下渲染的情况。"""
@@ -297,17 +311,46 @@ class PoiDetailPage(BasePage):
         """点击 POI 详情页底部“看点评”。"""
         self.tap_xpath(self.REVIEW_BUTTON_XPATH, "看点评按钮")
         self._continue_task_limit_prompt_if_present()
+        time.sleep(1.5)
+        if self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is not None:
+            button = self.find_xpath(self.REVIEW_BUTTON_XPATH)
+            if button is not None:
+                bounds = button.getBounds()
+                self.driver.click(
+                    (
+                        (int(bounds.left) + int(bounds.right)) // 2,
+                        (int(bounds.top) + int(bounds.bottom)) // 2,
+                    )
+                )
+                self._continue_task_limit_prompt_if_present()
+
+    def wait_review_service_loaded(self, *, timeout: float = 15):
+        """等待点评类关联元服务打开，不强依赖固定 title id。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            title = self.find_xpath(self.SERVICE_TITLE_XPATH)
+            if title is not None and self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is None:
+                return title
+            if self.find_xpath(self.POI_DETAIL_ROOT_XPATH) is None:
+                marker = self.find_xpath(self.REVIEW_SERVICE_READY_XPATH)
+                if marker is not None:
+                    return marker
+                marker = self.find_xpath('//Text[string-length(@text) > 0]')
+                if marker is not None:
+                    return marker
+            time.sleep(0.5)
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未进入看点评服务页，timeout={timeout}s")
 
     def _continue_task_limit_prompt_if_present(self) -> None:
         """兼容任务数量上限提示弹窗，出现时点击“继续”进入服务。"""
         continue_button = self.driver.wait_for_component(
             BY.xpath(self.TASK_LIMIT_CONTINUE_XPATH),
-            timeout=2,
+            timeout=0.8,
         )
         if continue_button is None:
             return
         continue_button.click()
-        time.sleep(1.5)
+        time.sleep(0.5)
 
     def system_gesture_back(self) -> None:
         """从屏幕右边缘左滑，执行 HarmonyOS 系统返回手势。"""
@@ -317,7 +360,7 @@ class PoiDetailPage(BasePage):
         """在 POI 详情卡片内向上滑动。"""
         detail = self.wait_xpath(self.POI_DETAIL_ROOT_XPATH, "POI详情卡片")
         self.driver.swipe("UP", distance=distance, area=detail, swipe_time=0.6)
-        time.sleep(0.8)
+        time.sleep(0.5)
 
     def scroll_detail_until_xpath_visible(
         self,
@@ -372,7 +415,7 @@ class PoiDetailPage(BasePage):
                 distance=swipe_distance,
                 area=recommendation_list,
             )
-            time.sleep(1)
+            time.sleep(0.6)
 
         list_bounds = recommendation_list.getBounds()
         for index in range(12, 0, -1):

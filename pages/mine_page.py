@@ -276,7 +276,7 @@ class MinePage(BasePage):
                 component = self.find_xpath(self.any_text_xpath(candidate_name))
                 if component is not None:
                     component.click()
-                    time.sleep(1.2)
+                    time.sleep(0.6)
                     return
             if swipe_count == max_swipes or time.monotonic() >= deadline:
                 break
@@ -290,7 +290,7 @@ class MinePage(BasePage):
                 )
             else:
                 self.driver.swipe("LEFT", distance=75, swipe_time=0.4)
-            time.sleep(0.8)
+            time.sleep(0.4)
 
         names = "、".join(candidate_names)
         raise RuntimeError(f"[{self.PAGE_NAME}] 未找到帮助与反馈分类：{names}")
@@ -378,7 +378,7 @@ class MinePage(BasePage):
         for _ in range(max_swipes):
             before_names = names
             self.driver.swipe("LEFT", distance=70, area=grid, swipe_time=0.55)
-            time.sleep(0.8)
+            time.sleep(0.4)
             names = self.visible_recent_service_names()
             if not names:
                 names = before_names
@@ -405,7 +405,7 @@ class MinePage(BasePage):
         for _ in range(max_swipes):
             before_names = names
             self.driver.swipe("RIGHT", distance=70, area=grid, swipe_time=0.55)
-            time.sleep(0.8)
+            time.sleep(0.4)
             names = self.visible_recent_service_names()
             if not names:
                 names = before_names
@@ -439,7 +439,7 @@ class MinePage(BasePage):
             last_names = names
             if names and names[0] == service_name:
                 return names
-            time.sleep(0.8)
+            time.sleep(0.4)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 服务“{service_name}”未移动到最近使用第一位，"
@@ -670,7 +670,7 @@ class MinePage(BasePage):
         search_input.inputText(keyword)
         time.sleep(0.4)
         self.driver.press_key(KeyCode.ENTER)
-        time.sleep(1)
+        time.sleep(0.5)
         if hasattr(search_input, "isFocused") and search_input.isFocused():
             self.driver.press_back()
             time.sleep(0.5)
@@ -769,7 +769,7 @@ class MinePage(BasePage):
                 max_swipes=max_swipes,
             ):
                 return True
-            time.sleep(0.8)
+            time.sleep(0.4)
         return False
 
     def scroll_favorite_post_into_view(

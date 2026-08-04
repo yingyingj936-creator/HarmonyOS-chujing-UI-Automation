@@ -54,7 +54,7 @@ class OutboundSearchPage(BasePage):
         '[.//Text[@text="查看详情"] and .//Text[contains(@text, {keyword})]]'
     )
     AI_SUMMARY_DETAIL_BUTTON_XPATH = (
-        '//*[@id="GlobalSearchResultComp"]/List/ListItem[1]'
+        '//*[@id="GlobalSearchResultComp"]/List/ListItem[.//Text[@text="查看详情"]][1]'
         '//Text[@text="查看详情"]'
     )
     LATEST_GUIDES_LIST_XPATH = (
@@ -402,6 +402,14 @@ class OutboundSearchPage(BasePage):
             timeout=timeout,
         )
 
+    def tap_ai_summary_detail(self, *, timeout: float = 8) -> None:
+        """点击搜索结果页 AI 总结模块的“查看详情”。"""
+        self.tap_xpath(
+            self.AI_SUMMARY_DETAIL_BUTTON_XPATH,
+            "搜索结果页AI总结查看详情按钮",
+            timeout=timeout,
+        )
+
     def input_and_tap_search(self, keyword: str) -> None:
         """输入关键词并点击页面内搜索按钮。"""
         self.input_keyword(keyword)
@@ -417,6 +425,53 @@ class OutboundSearchPage(BasePage):
             self.ranking_poi_xpath(poi_name),
             f"搜索榜单 POI“{poi_name}”",
         )
+
+    @staticmethod
+    def _bounds_tuple(component: Any) -> tuple[int, int, int, int]:
+        bounds = component.getBounds()
+        return (
+            int(bounds.left),
+            int(bounds.top),
+            int(bounds.right),
+            int(bounds.bottom),
+        )
+
+    def ranking_grid(self, *, timeout: float = 8):
+        """选择“必玩榜”对应的横向榜单 Grid，避免误取“大家都在搜”的 Grid。"""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            grids = self.driver.find_all_components(BY.xpath(self.RANKING_GRID_XPATH))
+            if grids is None:
+                time.sleep(0.3)
+                continue
+            if not isinstance(grids, list):
+                grids = [grids]
+
+            visible_grids = []
+            for grid in grids:
+                left, top, right, bottom = self._bounds_tuple(grid)
+                if right > left and bottom > top:
+                    visible_grids.append(grid)
+            if not visible_grids:
+                time.sleep(0.3)
+                continue
+
+            title = self.find_xpath(self.PLAY_RANKING_TITLE_XPATH)
+            if title is not None:
+                _, title_top, _, title_bottom = self._bounds_tuple(title)
+                candidates = []
+                for grid in visible_grids:
+                    _, grid_top, _, _ = self._bounds_tuple(grid)
+                    if grid_top >= title_top - 20:
+                        candidates.append((abs(grid_top - title_bottom), grid_top, grid))
+                if candidates:
+                    candidates.sort(key=lambda item: (item[0], item[1]))
+                    return candidates[0][2]
+
+            visible_grids.sort(key=lambda component: self._bounds_tuple(component)[1])
+            return visible_grids[-1] if len(visible_grids) > 1 else visible_grids[0]
+
+        raise RuntimeError(f"[{self.PAGE_NAME}] 未找到搜索页横向榜单，timeout={timeout}s")
 
     def tap_result_item(self, item_name: str) -> None:
         """点击搜索结果分组中的指定条目。"""
@@ -450,21 +505,20 @@ class OutboundSearchPage(BasePage):
         max_swipes: int = 6,
     ) -> None:
         """滚动搜索结果主列表，直到指定分组标题或条目重新渲染。"""
-        selector = BY.xpath(f'//Text[@text="{text}"]')
         result_list = self.wait_xpath(
             self.RESULT_LIST_XPATH,
             "搜索结果主列表",
         )
 
         for _ in range(max_swipes + 1):
-            if self.driver.wait_for_component(selector, timeout=1) is not None:
+            if self.find_xpath(f'//Text[@text="{text}"]') is not None:
                 return
             self.driver.swipe(
                 "UP",
                 distance=50,
                 area=result_list,
             )
-            time.sleep(0.6)
+            time.sleep(0.35)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 滚动搜索结果后仍未找到“{text}”"
@@ -482,11 +536,10 @@ class OutboundSearchPage(BasePage):
             self.result_group_list_xpath(group_index),
             f"搜索结果第 {group_index} 个横向分组",
         )
-        item_selector = BY.xpath(self.result_item_xpath(item_name))
         list_bounds = group_list.getBounds()
 
         for swipe_index in range(max_swipes + 1):
-            item = self.driver.wait_for_component(item_selector, timeout=1)
+            item = self.find_xpath(self.result_item_xpath(item_name))
             if item is not None:
                 item_bounds = item.getBounds()
                 if (
@@ -503,7 +556,7 @@ class OutboundSearchPage(BasePage):
                 distance=60,
                 area=group_list,
             )
-            time.sleep(0.6)
+            time.sleep(0.35)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 浏览第 {group_index} 个结果分组后"
@@ -539,7 +592,7 @@ class OutboundSearchPage(BasePage):
                 start_point=(0.5, 0.84),
                 swipe_time=0.5,
             )
-            time.sleep(0.8)
+            time.sleep(0.5)
         if not visible_titles:
             raise RuntimeError(
                 f"[{self.PAGE_NAME}] 最新攻略首屏没有可识别的帖子标题"
@@ -556,7 +609,7 @@ class OutboundSearchPage(BasePage):
                 start_point=(0.5, 0.88),
                 swipe_time=0.6,
             )
-            time.sleep(1)
+            time.sleep(0.6)
 
             current_titles = self._visible_latest_guide_titles()
             if not current_titles:
@@ -637,9 +690,8 @@ class OutboundSearchPage(BasePage):
         max_swipes: int = 4,
     ) -> None:
         """向上滚动榜单，直到指定 POI 文字进入可见区域。"""
-        selector = BY.xpath(self.ranking_poi_xpath(poi_name))
         for _ in range(max_swipes + 1):
-            if self.driver.wait_for_component(selector, timeout=1) is not None:
+            if self.find_xpath(self.ranking_poi_xpath(poi_name)) is not None:
                 return
             self.driver.swipe(
                 "UP",
@@ -658,21 +710,16 @@ class OutboundSearchPage(BasePage):
         max_swipes: int = 4,
     ) -> None:
         """在横向榜单中向右滑动，直到指定 POI 完整进入可见区域。"""
-        ranking_grid = self.wait_xpath(
-            self.RANKING_GRID_XPATH,
-            "搜索页横向榜单",
-        )
-        poi_selector = BY.xpath(self.ranking_poi_xpath(poi_name))
-
+        ranking_grid = self.ranking_grid()
         for _ in range(max_swipes):
             self.driver.swipe(
                 "RIGHT",
                 distance=55,
                 area=ranking_grid,
             )
-            time.sleep(0.6)
+            time.sleep(0.35)
 
-            poi = self.driver.wait_for_component(poi_selector, timeout=1)
+            poi = self.find_xpath(self.ranking_poi_xpath(poi_name))
             if poi is None:
                 continue
 
@@ -695,31 +742,24 @@ class OutboundSearchPage(BasePage):
         max_swipes: int = 8,
     ) -> None:
         """手指向左滑动横向榜单，浏览右侧内容直到目标 POI 完整可见。"""
-        ranking_grid = self.wait_xpath(
-            self.RANKING_GRID_XPATH,
-            "搜索页横向榜单",
-        )
-        poi_selector = BY.xpath(self.ranking_poi_xpath(poi_name))
+        for _ in range(max_swipes + 1):
+            ranking_grid = self.ranking_grid()
+            poi = self.find_xpath(self.ranking_poi_xpath(poi_name))
+            if poi is not None:
+                grid_bounds = ranking_grid.getBounds()
+                poi_bounds = poi.getBounds()
+                if (
+                    poi_bounds.left >= grid_bounds.left
+                    and poi_bounds.right <= grid_bounds.right
+                ):
+                    return
 
-        for _ in range(max_swipes):
             self.driver.swipe(
                 "LEFT",
-                distance=55,
+                distance=85,
                 area=ranking_grid,
             )
-            time.sleep(0.6)
-
-            poi = self.driver.wait_for_component(poi_selector, timeout=1)
-            if poi is None:
-                continue
-
-            grid_bounds = ranking_grid.getBounds()
-            poi_bounds = poi.getBounds()
-            if (
-                poi_bounds.left >= grid_bounds.left
-                and poi_bounds.right <= grid_bounds.right
-            ):
-                return
+            time.sleep(0.35)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 浏览右侧榜单后仍未看到 POI“{poi_name}”"

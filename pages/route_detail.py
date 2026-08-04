@@ -123,6 +123,32 @@ class RouteDetailPage(BasePage):
         'and .//Text[starts-with(@text, "\u5173\u952e\u666f\u70b9\uff1a")] '
         'and .//Text[@text="\u884c\u7a0b\u89c4\u5212"]]'
     )
+    ROUTE_AI_CONTENT_READY_XPATH_TEMPLATE = (
+        '//*[@id="mapPageRoot" '
+        'and .//*[@id="mapview"] '
+        'and .//*[@id="map_bottom_panel"] '
+        'and .//*[@id="copyPlanBtn"] '
+        'and .//Text[@text="{route_name}\u00b7\u6982\u89c8"] '
+        'and .//Text[@text="\u95ee\u4e00\u95ee"] '
+        'and .//Text[@text="\u884c\u7a0b\u89c4\u5212"]]'
+    )
+    ROUTE_AI_HIGHLIGHT_XPATH = (
+        '//*[@id="mapPageRoot"]//*[.//Text[contains(@text, "\u95ee\u4e00\u95ee")] '
+        'and (.//Text[contains(@text, "\u884c\u7a0b\u4eae\u70b9")] '
+        'or .//Text[contains(@text, "\u5173\u952e\u666f\u70b9")] '
+        'or .//Text[contains(@text, "Ai")] '
+        'or .//Text[contains(@text, "AI")])]'
+        ' | //*[@id="mapPageRoot"]//*[@clickable="true" '
+        'and .//Text[contains(@text, "\u95ee\u4e00\u95ee")]]'
+        ' | //*[@id="mapPageRoot"]//Text[contains(@text, "\u95ee\u4e00\u95ee")]'
+    )
+    ROUTE_AI_ASK_BUTTON_XPATH = (
+        '//*[@id="mapPageRoot"]//Text[contains(@text, "\u95ee\u4e00\u95ee") '
+        'and @clickable="true"]'
+        ' | //*[@id="mapPageRoot"]//*[@clickable="true" '
+        'and .//Text[contains(@text, "\u95ee\u4e00\u95ee")]]'
+        ' | //*[@id="mapPageRoot"]//Text[contains(@text, "\u95ee\u4e00\u95ee")]'
+    )
     ROUTE_ONE_CLICK_PLAY_BUTTON_XPATH = (
         '//Text[@text="\u4e00\u952e\u8ddf\u73a9" and @clickable="true"]'
     )
@@ -236,6 +262,17 @@ class RouteDetailPage(BasePage):
         return cls.ROUTE_CONTENT_READY_XPATH_TEMPLATE.format(route_name=route_name)
 
     @classmethod
+    def route_ai_content_ready_xpath(cls, route_name: str) -> str:
+        return cls.ROUTE_AI_CONTENT_READY_XPATH_TEMPLATE.format(route_name=route_name)
+
+    @classmethod
+    def route_any_content_ready_xpath(cls, route_name: str) -> str:
+        return (
+            f"{cls.route_content_ready_xpath(route_name)}"
+            f" | {cls.route_ai_content_ready_xpath(route_name)}"
+        )
+
+    @classmethod
     def surrounding_category_xpath(cls, category_name: str) -> str:
         return cls.SURROUNDING_CATEGORY_XPATH_TEMPLATE.format(
             category_name=category_name
@@ -331,7 +368,7 @@ class RouteDetailPage(BasePage):
 
     def wait_overview_modules(self, *, timeout: float = 8) -> None:
         """Verify overview highlights, key spots, and itinerary modules."""
-        ready_xpath = (
+        legacy_ready_xpath = (
             '//*[@id="mapPageRoot" '
             'and .//Text[@text="\u6e38\u73a9\u98ce\u683c"] '
             'and .//Text[@text="\u6700\u4f73\u65f6\u95f4"] '
@@ -339,7 +376,77 @@ class RouteDetailPage(BasePage):
             'and .//Text[starts-with(@text, "\u5173\u952e\u666f\u70b9\uff1a")] '
             'and .//Text[@text="\u884c\u7a0b\u89c4\u5212"]]'
         )
-        self.wait_xpath(ready_xpath, "路线概览核心模块", timeout=timeout)
+        ai_ready_xpath = (
+            '//*[@id="mapPageRoot" '
+            'and .//Text[@text="\u95ee\u4e00\u95ee"] '
+            'and .//Text[@text="\u884c\u7a0b\u89c4\u5212"] '
+            'and .//Text[contains(@text, "\u884c\u7a0b\u4eae\u70b9") '
+            'or contains(@text, "\u5173\u952e\u666f\u70b9")]]'
+        )
+        self.wait_any_xpath(
+            (legacy_ready_xpath, ai_ready_xpath),
+            "路线概览核心模块",
+            timeout=timeout,
+        )
+
+    def wait_ai_highlight_module(self, *, timeout: float = 8):
+        """等待新版行程亮点/关键景点 AI 模块展示。"""
+        component = self.driver.wait_for_component(
+            BY.xpath(self.ROUTE_AI_HIGHLIGHT_XPATH),
+            timeout=min(timeout, 3),
+        )
+        if component is not None:
+            return component
+        # “问一问”在新版卡片里可能是绘制文本，不进入 UI 树。
+        # 此时用底部卡片已稳定展示作为前置，再通过卡片相对位置点击。
+        return self.wait_xpath(
+            self.BOTTOM_PANEL_XPATH,
+            "路线详情底部卡片",
+            timeout=timeout,
+        )
+
+    def tap_ai_ask(self, *, timeout: float = 8) -> tuple[int, int, int, int]:
+        """点击路线详情行程亮点区域的“问一问”按钮。"""
+        ask = self.driver.wait_for_component(
+            BY.xpath(self.ROUTE_AI_ASK_BUTTON_XPATH),
+            timeout=min(timeout, 2),
+        )
+        if ask is not None:
+            bounds = ask.getBounds()
+            center = (
+                (int(bounds.left) + int(bounds.right)) // 2,
+                (int(bounds.top) + int(bounds.bottom)) // 2,
+            )
+            self.driver.click(center)
+            click_bounds = (
+                int(bounds.left),
+                int(bounds.top),
+                int(bounds.right),
+                int(bounds.bottom),
+            )
+        else:
+            page = self.wait_xpath(
+                self.ROOT_XPATH,
+                "路线详情页",
+                timeout=timeout,
+            )
+            bounds = page.getBounds()
+            width = int(bounds.right) - int(bounds.left)
+            height = int(bounds.bottom) - int(bounds.top)
+            # “问一问”是绘制内容时没有可点击节点，按整页比例命中完整可见的 AI 推荐问题卡片。
+            click_point = (
+                int(bounds.left) + int(width * 0.50),
+                int(bounds.top) + int(height * 0.59),
+            )
+            self.driver.click(click_point)
+            click_bounds = (
+                click_point[0] - 80,
+                click_point[1] - 60,
+                click_point[0] + 80,
+                click_point[1] + 60,
+            )
+        time.sleep(2)
+        return click_bounds
 
     def swipe_card_up(self) -> None:
         """Swipe the bottom route card upward."""
@@ -607,7 +714,7 @@ class RouteDetailPage(BasePage):
 
     def wait_generic_route_loaded(self, route_name: str, *, timeout: float = 12) -> None:
         """等待任意热门路线详情页加载完成。"""
-        ready_xpath = self.route_content_ready_xpath(route_name)
+        ready_xpath = self.route_any_content_ready_xpath(route_name)
         self.wait_xpath(ready_xpath, f"热门路线详情页{route_name}", timeout=timeout)
 
     def wait_surrounding_poi_list(self, *, timeout: float = 8) -> None:
@@ -718,7 +825,7 @@ class RouteDetailPage(BasePage):
             )
             if route_title is not None:
                 route_name = (route_title.getText() or "").replace("\u00b7\u6982\u89c8", "")
-                ready_xpath = self.route_content_ready_xpath(route_name)
+                ready_xpath = self.route_any_content_ready_xpath(route_name)
             else:
                 ready_xpath = self.ROUTE_ACTION_READY_XPATH
 

@@ -32,14 +32,7 @@ class NearbyPage(BasePage):
     BOTTOM_NAV_ROOT_XPATH = '//*[@id="HwAuthDialog_rootId"]'
     EXPLORE_NEARBY_XPATH = '//*[@id="NearRootId"]//Text[@text="探索附近"]'
     FOOD_CATEGORY_XPATH = '//*[@id="NearRootId"]//Text[@text="找美食"]'
-    READY_XPATH = (
-        '//*[@id="NearRootId" '
-        'and .//*[@id="mapview"] '
-        'and .//*[@id="nearby_map_bottom_panel"] '
-        'and .//*[@id="nearby_poiList"] '
-        'and .//Text[@text="探索附近"] '
-        'and .//Text[@text="找美食"]]'
-    )
+    READY_XPATH = '//*[@id="NearRootId"]'
     REGION_ENTRY_XPATH_TEMPLATE = (
         '//*[@id="NearRootId"]//*[@clickable="true" and .//Text[@text="{region_text}"]]'
     )
@@ -75,6 +68,51 @@ class NearbyPage(BasePage):
 
     _DISTANCE_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)(m|km)$", re.IGNORECASE)
     _RATING_PATTERN = re.compile(r"^评分\s*(\d+(?:\.\d+)?)$")
+    _REGION_TEXT_BLACKLIST = {
+        "搜索",
+        "探索附近",
+        "找美食",
+        "找酒店",
+        "必玩榜",
+        "当前选择：",
+        "重新定位",
+        "推荐地点",
+    }
+    _REGION_KEYWORDS = (
+        "中国",
+        "香港",
+        "澳门",
+        "泰国",
+        "温哥华",
+        "日本",
+        "韩国",
+        "新加坡",
+        "马来西亚",
+        "美国",
+        "英国",
+        "法国",
+        "澳大利亚",
+    )
+    _NON_POI_TEXTS = _REGION_TEXT_BLACKLIST | {
+        "首页",
+        "行程",
+        "附近",
+        "我的",
+        "中国香港",
+        "中国澳门",
+        "泰国",
+        "温哥华",
+        "入境",
+        "出行",
+        "购物",
+        "住宿",
+        "游玩",
+        "其它",
+        "详情",
+        "看附近",
+        "导航",
+        "收藏",
+    }
 
     @staticmethod
     def _as_list(components: Any) -> list[Any]:
@@ -137,11 +175,72 @@ class NearbyPage(BasePage):
     def wait_loaded(self, *, timeout: float = 10) -> None:
         """等待附近页关键区域加载完成。"""
         self.wait_xpath(self.READY_XPATH, "附近页完整结构", timeout=timeout)
+        self.close_search_layer_if_present()
         self.wait_poi_names_loaded(timeout=timeout)
 
-    def current_region_text(self, *, timeout: float = 8) -> str:
-        """读取附近页左上角当前地区，避免固定写死目的地。"""
+    def close_search_layer_if_present(self) -> bool:
+        """如果附近页停留在搜索弹层，先关闭回到默认附近页。"""
+        marker = self.find_xpath(self.SEARCH_CURRENT_SELECTION_XPATH)
+        if marker is None:
+            marker = self.find_xpath(self.SEARCH_RECOMMEND_TITLE_XPATH)
+        if marker is None:
+            return False
+
+        close_button = self._search_layer_close_button(marker)
+        if close_button is None:
+            return False
+
+        self._click_component_center(close_button)
+        time.sleep(0.2)
+        self.wait_xpath(self.READY_XPATH, "附近页默认结构", timeout=5)
+        return True
+
+    def _search_layer_close_button(self, marker: Any) -> Any | None:
+        """在搜索弹层标题上方右侧查找关闭按钮，避免固定坐标。"""
+        snapshot = UiSnapshot(self.driver).capture()
+        root = snapshot.find_xpath(self.ROOT_XPATH)
+        if root is None or not self._is_visible(root):
+            return None
+
+        root_bounds = root.getBounds()
+        marker_bounds = marker.getBounds()
+        root_left = int(root_bounds.left)
+        root_top = int(root_bounds.top)
+        root_width = int(root_bounds.right) - root_left
+        root_height = int(root_bounds.bottom) - root_top
+        right_area_left = root_left + int(root_width * 0.72)
+        upper_limit = int(marker_bounds.top)
+        lower_limit = root_top + int(root_height * 0.08)
+
+        components = snapshot.find_all_xpath(
+            f'{self.ROOT_XPATH}//*[@clickable="true"]'
+        )
+        candidates: list[tuple[int, int, Any]] = []
+        for component in self._as_list(components):
+            if not self._is_visible(component):
+                continue
+            bounds = component.getBounds()
+            left = int(bounds.left)
+            top = int(bounds.top)
+            right = int(bounds.right)
+            bottom = int(bounds.bottom)
+            center_x = (left + right) // 2
+            center_y = (top + bottom) // 2
+            if center_x < right_area_left:
+                continue
+            if not lower_limit <= center_y < upper_limit:
+                continue
+            candidates.append((center_y, center_x, component))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        return candidates[0][2]
+
+    def current_region_component(self, *, timeout: float = 8) -> Any:
+        """返回附近页左上角地区文字组件。"""
         deadline = time.time() + timeout
+        drawer_blocking_top = False
         while time.time() < deadline:
             snapshot = UiSnapshot(self.driver).capture()
             root = snapshot.find_xpath(self.ROOT_XPATH)
@@ -165,20 +264,58 @@ class NearbyPage(BasePage):
                 if not text:
                     continue
                 bounds = component.getBounds()
+                if not (int(bounds.left) <= max_left and int(bounds.top) <= max_top):
+                    continue
+                if text in self._REGION_TEXT_BLACKLIST:
+                    drawer_blocking_top = drawer_blocking_top or text == "搜索"
+                    continue
+                if not self._looks_like_region_text(text):
+                    continue
                 if int(bounds.left) <= max_left and int(bounds.top) <= max_top:
-                    return text
+                    return component
+
+            if drawer_blocking_top:
+                panel = snapshot.find_xpath(self.SORT_PANEL_XPATH)
+                if panel is not None and self._is_visible(panel):
+                    self.driver.swipe("DOWN", distance=70, area=panel, swipe_time=0.5)
+                    time.sleep(0.35)
+                    drawer_blocking_top = False
+                    continue
             time.sleep(0.3)
 
         raise RuntimeError(f"[{self.PAGE_NAME}] 未读取到附近页左上角当前地区")
 
+    @classmethod
+    def _looks_like_region_text(cls, text: str) -> bool:
+        if text in cls._REGION_TEXT_BLACKLIST:
+            return False
+        if not 2 <= len(text) <= 12:
+            return False
+        if any(char.isdigit() for char in text):
+            return False
+        return any(keyword in text for keyword in cls._REGION_KEYWORDS)
+
+    def current_region_text(self, *, timeout: float = 8) -> str:
+        """读取附近页左上角当前地区，避免固定写死目的地。"""
+        return self.current_region_component(timeout=timeout).getText().strip()
+
     def tap_region_selector(self, *, timeout: float = 8) -> str:
         """点击附近页左上角地区入口，并返回点击前的地区名称。"""
-        current_region = self.current_region_text(timeout=timeout)
-        self.tap_xpath(
-            self.region_entry_xpath(current_region),
-            f"附近页左上角地区入口“{current_region}”",
-            timeout=timeout,
-        )
+        region_component = self.current_region_component(timeout=timeout)
+        current_region = region_component.getText().strip()
+        self._click_component_center(region_component)
+        if (
+            self.driver.wait_for_component(
+                BY.xpath('//Text[@text="选择旅行目的地"]'),
+                timeout=2,
+            )
+            is None
+        ):
+            self.tap_xpath(
+                self.region_entry_xpath(current_region),
+                f"附近页左上角地区入口“{current_region}”",
+                timeout=timeout,
+            )
         return current_region
 
     def wait_region_refreshed(
@@ -233,7 +370,7 @@ class NearbyPage(BasePage):
             )
             if category_text is not None:
                 self._click_component_center(category_text)
-                time.sleep(0.8)
+                time.sleep(0.4)
                 return
 
             self._swipe_left_category_rail_up()
@@ -439,6 +576,9 @@ class NearbyPage(BasePage):
 
         components = snapshot.find_all_xpath(self.POI_LIST_TEXT_XPATH)
         poi_list = snapshot.find_xpath(self.POI_LIST_XPATH)
+        if not self._as_list(components):
+            components = snapshot.find_all_xpath(f"{self.ROOT_XPATH}//Text")
+            poi_list = snapshot.find_xpath(self.ROOT_XPATH)
         names: list[str] = []
         target_candidates: list[tuple[int, int, Any]] = []
         seen: set[str] = set()
@@ -532,7 +672,7 @@ class NearbyPage(BasePage):
                     start_point=(0.55, 0.82),
                     swipe_time=0.55,
                 )
-            time.sleep(0.8)
+            time.sleep(0.45)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 附近 POI 列表未找到“{poi_name}”，"
@@ -543,7 +683,7 @@ class NearbyPage(BasePage):
         """点击附近 POI 列表中的指定地点。"""
         component = self.scroll_poi_into_view(poi_name, max_swipes=max_swipes)
         self._click_component_center(component)
-        time.sleep(1.2)
+        time.sleep(0.7)
 
     def open_search_layer(self, *, timeout: float = 8) -> None:
         """点击附近页底部抽屉搜索框，打开搜索弹层。"""
@@ -552,19 +692,21 @@ class NearbyPage(BasePage):
 
     def wait_search_layer_opened(self, *, timeout: float = 8) -> None:
         """等待附近页搜索弹层展示当前选择、重新定位和推荐地点。"""
-        self.wait_xpath(
-            self.SEARCH_CURRENT_SELECTION_XPATH,
-            "附近页搜索弹层-当前选择",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.SEARCH_RELOCATE_XPATH,
-            "附近页搜索弹层-重新定位",
-            timeout=timeout,
-        )
-        self.wait_xpath(
-            self.SEARCH_RECOMMEND_TITLE_XPATH,
-            "附近页搜索弹层-推荐地点",
+        self.snapshot_xpaths(
+            {
+                "current": (
+                    self.SEARCH_CURRENT_SELECTION_XPATH,
+                    "???????????",
+                ),
+                "relocate": (
+                    self.SEARCH_RELOCATE_XPATH,
+                    "???????????",
+                ),
+                "recommend": (
+                    self.SEARCH_RECOMMEND_TITLE_XPATH,
+                    "???????????",
+                ),
+            },
             timeout=timeout,
         )
 
@@ -605,9 +747,10 @@ class NearbyPage(BasePage):
         deadline = time.time() + timeout
         last_candidates: list[tuple[int, int, str]] = []
         while time.time() < deadline:
-            poi_component = self.find_xpath(self.search_result_text_xpath(poi_name))
-            action_components = self.driver.find_all_components(
-                BY.xpath(self.search_result_text_xpath(action_text))
+            snapshot = UiSnapshot(self.driver).capture()
+            poi_component = snapshot.find_xpath(self.search_result_text_xpath(poi_name))
+            action_components = snapshot.find_all_xpath(
+                self.search_result_text_xpath(action_text)
             )
             action_components = self._as_list(action_components)
             if poi_component is not None:
@@ -654,7 +797,7 @@ class NearbyPage(BasePage):
             timeout=timeout,
         )
         self._click_component_center(component)
-        time.sleep(1.2)
+        time.sleep(0.5)
 
     def tap_recommended_poi(self, poi_name: str, *, timeout: float = 8) -> None:
         """
@@ -669,7 +812,7 @@ class NearbyPage(BasePage):
             timeout=timeout,
         )
         self._click_component_center(component)
-        time.sleep(1.2)
+        time.sleep(0.5)
 
     def wait_selected_poi_surrounding_loaded(
         self,
@@ -740,7 +883,7 @@ class NearbyPage(BasePage):
             f"附近页排序选项“{sort_name}”",
             timeout=timeout,
         )
-        time.sleep(1)
+        time.sleep(0.5)
 
     def visible_poi_records(self) -> tuple[NearbyPoiRecord, ...]:
         """读取当前可见 POI 卡片的名称、评分和距离。"""
@@ -939,7 +1082,7 @@ class NearbyPage(BasePage):
                 start_point=(0.55, 0.84),
                 swipe_time=0.65,
             )
-            time.sleep(1)
+            time.sleep(0.6)
             current_names = self.visible_poi_names()
             if current_names and set(current_names) != before_set:
                 return current_names, "上滑后出现新的可见POI"
@@ -959,7 +1102,7 @@ class NearbyPage(BasePage):
             # 卡片已展开后，再尝试直接滚动 POI 列表。
             poi_list = self.wait_xpath(self.POI_LIST_XPATH, "附近页POI列表", timeout=8)
             self.driver.swipe("UP", distance=70, area=poi_list, swipe_time=0.6)
-            time.sleep(1)
+            time.sleep(0.6)
             current_names = self.visible_poi_names()
             if current_names and set(current_names) != before_set:
                 return current_names, "列表滚动后出现新的可见POI"
@@ -978,8 +1121,14 @@ class NearbyPage(BasePage):
     def _is_poi_name(self, text: str) -> bool:
         if not text:
             return False
+        if text in self._NON_POI_TEXTS:
+            return False
+        if len(text) <= 1:
+            return False
         if self._DISTANCE_PATTERN.match(text):
             return False
         if text.startswith("评分") or text.endswith("人去过"):
+            return False
+        if text.startswith(("距", "约", "暂无", "加载")):
             return False
         return True

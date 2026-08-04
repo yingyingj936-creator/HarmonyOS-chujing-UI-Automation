@@ -41,8 +41,16 @@ def test_trip_page_create_area_and_my_trip_list(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3：查看我的行程列表和查看视频教程入口"):
-        trip_manager.scroll_to_my_trips_area(max_swipes=8)
+    with allure.step("步骤3：查看“查看视频教程”入口和我的行程列表"):
+        trip_manager.scroll_to_video_tutorial_entry(max_swipes=6)
+        assert_visible_and_attach_highlight(
+            driver,
+            BY.xpath(trip_manager.VIDEO_TUTORIAL_XPATH),
+            "行程页-查看视频教程入口",
+            timeout=8,
+            attach_crop=False,
+        )
+        trip_manager.scroll_to_my_trips_area(max_swipes=10)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_manager.MY_TRIPS_TITLE_XPATH),
@@ -50,14 +58,7 @@ def test_trip_page_create_area_and_my_trip_list(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
-        assert_visible_and_attach_highlight(
-            driver,
-            BY.xpath(trip_manager.VIDEO_TUTORIAL_XPATH),
-            "我的行程区域-查看视频教程入口",
-            timeout=8,
-            attach_crop=False,
-        )
-        trip_manager.scroll_to_trip_card_with_required_fields(max_swipes=8)
+        trip_manager.scroll_to_trip_card_with_required_fields(max_swipes=10)
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(trip_manager.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH),

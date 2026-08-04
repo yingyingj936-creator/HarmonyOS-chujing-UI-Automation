@@ -5,9 +5,9 @@ ability = "EntryAbility"
 default_destination = "中国香港"
 
 [runtime]
-startup_wait_seconds = 4.0
+startup_wait_seconds = 2.5
 cleanup_back_steps = 10
-cleanup_back_interval_seconds = 0.4
+cleanup_back_interval_seconds = 0.25
 
 [execution]
 enable_file_order = true

@@ -30,7 +30,7 @@ def test_poi_hotel_booking_and_navigation(driver) -> None:
     with allure.step("步骤1：向右滑动到香港平价住宿榜单"):
         search_page.browse_ranking_to_right_until_visible(
             POI_NAME,
-            max_swipes=8,
+            max_swipes=12,
         )
         assert_visible_and_attach_highlight(
             driver,

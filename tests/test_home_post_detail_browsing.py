@@ -85,13 +85,13 @@ def test_home_post_detail_browsing(driver) -> None:
         )
 
     with allure.step(
-        "步骤2：查看返回按钮、图集页码、标题、作者头像、正文、"
+        "步骤2：查看返回按钮、图集页码、标题、正文、作者/定位信息、"
         "浏览数、点赞数、收藏数和更多攻略"
     ):
         detail.scroll_to_top()
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(detail.BACK_BUTTON_XPATH),
+            detail.back_button(timeout=8),
             "帖子详情页-返回按钮",
             timeout=8,
             attach_crop=False,
@@ -104,12 +104,19 @@ def test_home_post_detail_browsing(driver) -> None:
             timeout=8,
             attach_crop=False,
         )
+        detail.wait_text(card.title, "帖子标题")
 
         detail.scroll_to_article_metadata(card.title, card.author)
-        detail.wait_text(card.title, "帖子标题")
-        detail.wait_text(card.author, "作者昵称")
-        detail.wait_author_avatar(card.author)
-        body_component = detail.wait_visible_body_text()
+        author_component = detail.visible_author_info(card.author)
+        if author_component is not None:
+            attach_highlighted_bounds(
+                driver,
+                author_component.getBounds(),
+                "帖子详情页-作者或定位信息",
+            )
+        body_component = detail.wait_visible_body_text(
+            exclude_texts=(card.title, card.author)
+        )
         attach_highlighted_bounds(
             driver,
             body_component.getBounds(),

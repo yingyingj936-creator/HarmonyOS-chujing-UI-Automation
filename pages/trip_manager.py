@@ -34,9 +34,7 @@ class TripManagerPage(BasePage):
         'or (contains(@text, "参考热门路线") and contains(@text, "修改")) '
         'or contains(@text, "查看视频教程")]'
     )
-    MY_TRIPS_AREA_MARKER_XPATH = (
-        '//Text[@text="我的行程" or contains(@text, "查看视频教程")]'
-    )
+    MY_TRIPS_AREA_MARKER_XPATH = MY_TRIPS_TITLE_XPATH
     TOP_AREA_MARKER_XPATH = (
         '//Text[@text="创建行程" '
         'or (contains(@text, "参考热门路线") and contains(@text, "修改"))]'
@@ -96,7 +94,7 @@ class TripManagerPage(BasePage):
         if component is None:
             return None
         navigation = self.cached_xpath(
-            self.SCREEN_ROOT_XPATH,
+            self.BOTTOM_TRIP_TAB_XPATH,
             max_age_seconds=30,
         )
         if navigation is None:
@@ -106,6 +104,20 @@ class TripManagerPage(BasePage):
         if card_bottom > navigation_top - 10:
             return None
         return component
+
+    def _visible_trip_card_from_snapshot(self, snapshot: UiSnapshot, xpath: str):
+        navigation = snapshot.find_xpath(self.BOTTOM_TRIP_TAB_XPATH)
+        navigation_top = None
+        if navigation is not None:
+            _, navigation_top, _, _ = self._bounds_tuple(navigation)
+        for component in self._as_list(snapshot.find_all_xpath(xpath)):
+            left, top, right, bottom = self._bounds_tuple(component)
+            if right <= left or bottom <= top or bottom <= 0:
+                continue
+            if navigation_top is not None and bottom > navigation_top - 10:
+                continue
+            return component
+        return None
 
     @staticmethod
     def _display_name_xpath_condition(trip_name: str) -> str:
@@ -211,7 +223,7 @@ class TripManagerPage(BasePage):
                 has_trip_tab and (has_create or has_my_trips or has_video)
             ):
                 return
-            time.sleep(0.5)
+            time.sleep(0.3)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 未找到行程页核心区域，timeout={timeout}s"
@@ -236,12 +248,37 @@ class TripManagerPage(BasePage):
                     trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "DOWN",
-                distance=70,
+                distance=95,
                 area=trip_list,
             )
             invalidate_component_cache(self.driver)
-            time.sleep(0.35)
+            time.sleep(0.2)
         raise RuntimeError(f"[{self.PAGE_NAME}] create-trip area is not visible")
+
+    def scroll_to_video_tutorial_entry(self, *, max_swipes: int = 6) -> None:
+        """Scroll until the video tutorial entry is visible."""
+        trip_list = None
+        for swipe_count in range(max_swipes + 1):
+            snapshot = UiSnapshot(self.driver).capture()
+            if snapshot.find_xpath(self.VIDEO_TUTORIAL_XPATH) is not None:
+                return
+            if swipe_count == max_swipes:
+                break
+            if trip_list is None:
+                trip_list = snapshot.find_xpath(self.TRIP_LIST_XPATH)
+                if trip_list is None:
+                    trip_list = self.wait_xpath(
+                        self.TRIP_LIST_XPATH,
+                        "trip page scroll list",
+                    )
+            self.driver.swipe(
+                "UP",
+                distance=75,
+                area=trip_list,
+            )
+            invalidate_component_cache(self.driver)
+            time.sleep(0.25)
+        raise RuntimeError(f"[{self.PAGE_NAME}] video tutorial entry is not visible")
 
     def scroll_to_my_trips_area(self, *, max_swipes: int = 6) -> None:
         """Scroll to the My Trips area."""
@@ -258,11 +295,11 @@ class TripManagerPage(BasePage):
                     trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "UP",
-                distance=45,
+                distance=90,
                 area=trip_list,
             )
             invalidate_component_cache(self.driver)
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         raise RuntimeError(f"[{self.PAGE_NAME}] My Trips area is not visible")
 
@@ -280,11 +317,24 @@ class TripManagerPage(BasePage):
         max_swipes: int = 8,
     ) -> object:
         """Return a visible trip card with required summary fields."""
+        trip_card = self._visible_trip_card_from_snapshot(
+            UiSnapshot(self.driver).capture(),
+            self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH,
+        )
+        if trip_card is not None:
+            return trip_card
+
+        max_swipes = max(10, max_swipes)
+        # 全量执行时行程页可能保留上一次滚动位置，先回到顶部再找真正的“我的行程”标题。
+        self.scroll_to_create_area(max_swipes=max_swipes)
         self.scroll_to_my_trips_area(max_swipes=max_swipes)
         trip_list = None
         for swipe_count in range(max_swipes + 1):
             snapshot = UiSnapshot(self.driver).capture()
-            trip_card = snapshot.find_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
+            trip_card = self._visible_trip_card_from_snapshot(
+                snapshot,
+                self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH,
+            )
             if trip_card is not None:
                 return trip_card
             if swipe_count == max_swipes:
@@ -295,11 +345,11 @@ class TripManagerPage(BasePage):
                     trip_list = self.wait_xpath(self.TRIP_LIST_XPATH, "trip page scroll list")
             self.driver.swipe(
                 "UP",
-                distance=35,
+                distance=90,
                 area=trip_list,
             )
             invalidate_component_cache(self.driver)
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         raise RuntimeError(f"[{self.PAGE_NAME}] no visible trip card with required fields")
 
@@ -311,6 +361,10 @@ class TripManagerPage(BasePage):
     def current_visible_trip_cards_with_titles(self) -> list[tuple]:
         """读取当前屏幕内已展示的行程卡片及标题，不额外滚动。"""
         snapshot = UiSnapshot(self.driver).capture()
+        return self._trip_cards_with_titles_from_snapshot(snapshot)
+
+    def _trip_cards_with_titles_from_snapshot(self, snapshot: UiSnapshot) -> list[tuple]:
+        """Read visible trip cards and titles from one already captured tree."""
         cards = self._as_list(
             snapshot.find_all_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
         )
@@ -385,7 +439,7 @@ class TripManagerPage(BasePage):
                         trip_name,
                         max_swipes=6,
                     )
-                time.sleep(0.5)
+                time.sleep(0.3)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 长按行程卡片后未弹出编辑菜单，"
@@ -468,7 +522,7 @@ class TripManagerPage(BasePage):
         while time.time() < deadline:
             if self.find_xpath(target_xpath) is None:
                 return
-            time.sleep(0.5)
+            time.sleep(0.3)
 
         visible_titles = [
             title
@@ -490,7 +544,7 @@ class TripManagerPage(BasePage):
             card_infos = self.visible_trip_cards_with_titles(max_swipes=2)
             if card_infos and card_infos[0][1] == expected_title:
                 return
-            time.sleep(0.5)
+            time.sleep(0.3)
 
         visible_titles = [
             title
@@ -567,19 +621,37 @@ class TripManagerPage(BasePage):
 
         self.scroll_to_my_trips_area(max_swipes=max(max_swipes, 10))
         scan_swipes = max(max_swipes, 24)
+        last_visible_titles: tuple[str, ...] = ()
+        unchanged_visible_titles_count = 0
         for swipe_count in range(scan_swipes + 1):
-            visible_target = self._visible_trip_card(target_xpath)
+            snapshot = UiSnapshot(self.driver).capture()
+            visible_target = self._visible_trip_card_from_snapshot(
+                snapshot,
+                target_xpath,
+            )
             if visible_target is not None:
                 return visible_target
+            visible_titles = tuple(
+                title
+                for _, title in self._trip_cards_with_titles_from_snapshot(snapshot)
+            )
+            if visible_titles:
+                if visible_titles == last_visible_titles:
+                    unchanged_visible_titles_count += 1
+                else:
+                    unchanged_visible_titles_count = 0
+                    last_visible_titles = visible_titles
+                if unchanged_visible_titles_count >= 3 and swipe_count >= 6:
+                    break
             if swipe_count == scan_swipes:
                 break
             self.driver.swipe(
                 "UP",
-                distance=50,
+                distance=75,
                 area=trip_list,
             )
             invalidate_component_cache(self.driver)
-            time.sleep(0.4)
+            time.sleep(0.2)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 从列表顶部向下扫描 {scan_swipes} 次后"
@@ -599,5 +671,14 @@ class TripManagerPage(BasePage):
             start_point=(0.5, 0.3),
         )
         invalidate_component_cache(self.driver)
-        time.sleep(2)
+        deadline = time.time() + 3
+        while time.time() < deadline:
+            snapshot = UiSnapshot(self.driver).capture()
+            if (
+                snapshot.find_xpath(self.MY_TRIPS_AREA_MARKER_XPATH) is not None
+                or snapshot.find_xpath(self.TRIP_CARD_WITH_REQUIRED_FIELDS_XPATH)
+                is not None
+            ):
+                return
+            time.sleep(0.25)
 

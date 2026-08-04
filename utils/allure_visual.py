@@ -126,6 +126,52 @@ def component_has_red_highlight(
     return False
 
 
+def component_has_red_or_yellow_highlight(
+    driver: Any,
+    component: Any,
+    *,
+    minimum_colored_pixels: int = 20,
+) -> bool:
+    """识别红色或黄色高亮态，兼容点赞、收藏等图标按钮。"""
+    with TemporaryDirectory() as temp_dir:
+        crop_jpeg_path = Path(temp_dir) / "state.jpeg"
+        saved_crop_jpeg_path = Path(
+            driver.capture_screen(
+                str(crop_jpeg_path),
+                in_pc=True,
+                area=component,
+            )
+        )
+        with Image.open(saved_crop_jpeg_path) as image:
+            colored_pixels = 0
+            rgb_image = image.convert("RGB")
+            pixels = (
+                rgb_image.get_flattened_data()
+                if hasattr(rgb_image, "get_flattened_data")
+                else rgb_image.getdata()
+            )
+            for red, green, blue in pixels:
+                is_red = (
+                    red >= 175
+                    and green <= 145
+                    and blue <= 155
+                    and red - green >= 50
+                    and red - blue >= 35
+                )
+                is_yellow = (
+                    red >= 175
+                    and green >= 135
+                    and blue <= 90
+                    and red - blue >= 80
+                    and green - blue >= 55
+                )
+                if is_red or is_yellow:
+                    colored_pixels += 1
+                    if colored_pixels >= minimum_colored_pixels:
+                        return True
+    return False
+
+
 def assert_visible_and_attach_highlight(
     driver: Any,
     selector: Any,

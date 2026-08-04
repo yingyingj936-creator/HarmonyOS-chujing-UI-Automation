@@ -8,7 +8,7 @@ from utils.component_cache import (
     recent_component,
     remember_component,
 )
-from utils.ui_snapshot import UiSnapshot
+from utils.ui_snapshot import UiSnapshot, cached_snapshot
 
 
 class BasePage:
@@ -125,7 +125,10 @@ class BasePage:
 
     def find_xpath(self, xpath: str) -> Any | None:
         selector = BY.xpath(xpath)
-        component = self.driver.find_component(selector)
+        try:
+            component = cached_snapshot(self.driver).find_xpath(xpath)
+        except Exception:
+            component = self.driver.find_component(selector)
         if component is not None:
             remember_component(self.driver, selector, component)
         return component

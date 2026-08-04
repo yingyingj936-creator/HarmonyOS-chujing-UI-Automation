@@ -43,7 +43,7 @@ def test_home_guide_like_persists_after_restart(
                 attach_crop=False,
             )
 
-        with allure.step("步骤2：进入帖子详情，校验右下角点赞状态和数量同步"):
+        with allure.step("步骤2：进入帖子详情，校验点赞状态和数量同步"):
             home.tap_guide_card(target_post_id)
             try:
                 detail.wait_loaded(timeout=6)
@@ -57,11 +57,11 @@ def test_home_guide_like_persists_after_restart(
                 detail.wait_loaded(timeout=10)
             detail.scroll_to_like_stats()
             assert detail.wait_like_count(liked_count) == liked_count
-            assert detail.is_liked(), "帖子详情页右下角爱心不是已点赞态"
+            assert detail.is_liked(), "帖子详情页点赞爱心不是已点赞态"
             assert_visible_and_attach_highlight(
                 driver,
-                BY.xpath(detail.LIKE_ROW_XPATH),
-                f"帖子详情右下角点赞已同步-{liked_count}",
+                detail.like_action_component(timeout=8),
+                f"帖子详情点赞已同步-{liked_count}",
                 timeout=8,
                 attach_crop=False,
             )

@@ -244,11 +244,11 @@ class OutboundHomePage(BasePage):
 
     def ensure_kingkong_first_page(self) -> None:
         """将金刚区恢复到包含“景区门票”的默认第一屏。"""
-        self.restore_top(max_swipes=18)
+        self.restore_top(max_swipes=14)
         home_tab = self._restore_service_tab_row()
         if home_tab is not None:
             home_tab.click()
-            time.sleep(0.8)
+            time.sleep(0.4)
         if self.driver.wait_for_component(
             BY.xpath(self.SCENIC_TICKET_ENTRY_XPATH),
             timeout=1,
@@ -477,7 +477,7 @@ class OutboundHomePage(BasePage):
                 time.sleep(0.4)
 
             if attempt == 0:
-                time.sleep(0.6)
+                time.sleep(0.3)
 
         if last_ids:
             return last_ids
@@ -498,7 +498,7 @@ class OutboundHomePage(BasePage):
         )
 
         deadline = time.monotonic() + timeout
-        time.sleep(0.8)
+        time.sleep(0.4)
         while time.monotonic() < deadline:
             current_ids = self.visible_guide_post_ids()
             if current_ids:
@@ -628,7 +628,7 @@ class OutboundHomePage(BasePage):
                 start_point=(0.5, 0.82),
                 swipe_time=0.6,
             )
-            time.sleep(0.8)
+            time.sleep(0.5)
 
         raise RuntimeError(f"[{self.PAGE_NAME}] 上拉后没有可见攻略卡片")
 
@@ -656,7 +656,7 @@ class OutboundHomePage(BasePage):
                 start_point=(0.5, 0.84),
                 swipe_time=0.6,
             )
-            time.sleep(1)
+            time.sleep(0.6)
 
             current_ids = self.visible_guide_post_ids()
             if not current_ids:
@@ -856,7 +856,7 @@ class OutboundHomePage(BasePage):
                         (int(bounds.top) + int(bounds.bottom)) // 2,
                     )
                 )
-                time.sleep(0.8)
+                time.sleep(0.5)
                 return
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 攻略 {post_id} 的封面和标题均不在安全点击区域"
@@ -914,7 +914,7 @@ class OutboundHomePage(BasePage):
                     return count, liked
             else:
                 matched_rounds = 0
-            time.sleep(0.8)
+            time.sleep(0.5)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 攻略 {post_id} 点赞状态未稳定到预期："
@@ -1070,7 +1070,7 @@ class OutboundHomePage(BasePage):
                 start_point=(0.5, 0.82),
                 swipe_time=0.6,
             )
-            time.sleep(0.8)
+            time.sleep(0.5)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 浏览 {max_swipes} 屏后仍未找到未点赞攻略"
@@ -1107,7 +1107,7 @@ class OutboundHomePage(BasePage):
                 start_point=(0.5, 0.82),
                 swipe_time=0.6,
             )
-            time.sleep(0.8)
+            time.sleep(0.5)
 
         raise RuntimeError(
             f"[{self.PAGE_NAME}] 重进后未在发现流找到攻略 {post_id}"
@@ -1142,11 +1142,11 @@ class OutboundHomePage(BasePage):
         """向首页顶部方向滑动，避开底部导航和吸顶分类栏。"""
         self.driver.swipe(
             "DOWN",
-            distance=90,
+            distance=95,
             start_point=(0.5, 0.55),
             swipe_time=0.5,
         )
-        time.sleep(0.4)
+        time.sleep(0.25)
 
     def wait_loaded(self, timeout: float = 8) -> bool:
         """等待首页标识元素出现。"""
@@ -1155,10 +1155,14 @@ class OutboundHomePage(BasePage):
     def is_at_home(self) -> bool:
         """
         判断当前是否在首页。
-        逻辑：判断首页特有的、唯一的组件是否存在。
+        首页可能停留在瀑布流中部，此时顶部搜索框不在 UI 树中。
+        因此用首页根容器 + 底部首页入口判断，避免清理逻辑误按返回退出服务。
         """
         try:
-            return self.find_xpath(self.SEARCH_BAR_XPATH) is not None
+            return (
+                self.find_xpath(self.HOME_ROOT_XPATH) is not None
+                and self.find_xpath(self.BOTTOM_HOME_TAB_XPATH) is not None
+            )
         except Exception:
             return False
 

@@ -1,6 +1,7 @@
 import allure
 from hypium import BY
 
+from pages.ai_chat import AiChatPage
 from pages.outbound_home import OutboundHomePage
 from pages.route_detail import RouteDetailPage
 from utils.allure_visual import (
@@ -17,6 +18,7 @@ ROUTE_NAME = "\u9999\u6e2f\u901b\u5403\u4e24\u65e5\u6e38"
 def test_home_hot_route_detail_browsing(driver) -> None:
     """验证打开热门路线、滑动详情卡片并返回首页。"""
     home = OutboundHomePage(driver)
+    ai_chat = AiChatPage(driver)
     route_detail = RouteDetailPage(driver)
 
     with allure.step("前置条件：普通用户已进入首页，且当前目的地下存在热门路线"):
@@ -40,7 +42,29 @@ def test_home_hot_route_detail_browsing(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤2：向上向下拉动路线详情卡片，校验模块内容可滑动展示"):
+    with allure.step("步骤2：点击行程亮点“问一问”，校验进入AI对话页"):
+        route_detail.wait_ai_highlight_module(timeout=10)
+        ask_bounds = route_detail.tap_ai_ask(timeout=8)
+        attach_highlighted_bounds(
+            driver,
+            ask_bounds,
+            "路线详情问一问点击区域",
+        )
+        ai_ready = ai_chat.wait_loaded(
+            previous_root_xpath=route_detail.ROOT_XPATH,
+            timeout=15,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            ai_ready,
+            "AI对话页-路线问一问",
+            timeout=8,
+            attach_crop=False,
+        )
+        ai_chat.press_system_back()
+        route_detail.wait_loaded(ROUTE_NAME, timeout=12)
+
+    with allure.step("步骤3：向上向下拉动路线详情卡片，校验模块内容可滑动展示"):
         route_detail.scroll_to_warm_tips(max_swipes=8)
         assert_visible_and_attach_highlight(
             driver,
@@ -56,7 +80,7 @@ def test_home_hot_route_detail_browsing(driver) -> None:
             timeout=8,
         )
 
-    with allure.step("步骤3：点击返回键，校验可以回到首页"):
+    with allure.step("步骤4：点击返回键，校验可以回到首页"):
         route_detail.tap_back_button()
         assert home.wait_first_screen_loaded(timeout=10), (
             "点击返回后未回到首页"

@@ -50,7 +50,7 @@ def test_home_hot_route_play_mode_sidebar_post_return(driver) -> None:
         )
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(post_detail.BACK_BUTTON_XPATH),
+            post_detail.back_button(timeout=8),
             "\u5e16\u5b50\u8be6\u60c5\u9875\u8fd4\u56de\u6309\u94ae",
             timeout=8,
             attach_crop=False,

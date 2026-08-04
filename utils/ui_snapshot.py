@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from hypium import BY
 from hypium.uidriver.uitree.uitree import UiTree
+
+from utils.component_cache import component_generation
+
+
+_SNAPSHOT_CACHE_ATTR = "_ui_auto_snapshot_cache"
 
 
 class UiSnapshot:
@@ -39,3 +45,22 @@ class UiSnapshot:
         if component is None:
             raise RuntimeError(f"UI 快照中未找到{name}")
         return component
+
+
+def cached_snapshot(driver: Any, *, max_age_seconds: float = 0.25) -> UiSnapshot:
+    """Reuse one freshly dumped UI tree for adjacent read-only checks."""
+    state = object.__getattribute__(driver, "__dict__")
+    generation = component_generation(driver)
+    now = time.monotonic()
+    cached = state.get(_SNAPSHOT_CACHE_ATTR)
+    if cached is not None:
+        cached_generation, captured_at, snapshot = cached
+        if (
+            cached_generation == generation
+            and now - captured_at <= max_age_seconds
+        ):
+            return snapshot
+
+    snapshot = UiSnapshot(driver).capture()
+    state[_SNAPSHOT_CACHE_ATTR] = (generation, now, snapshot)
+    return snapshot

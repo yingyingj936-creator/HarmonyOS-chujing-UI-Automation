@@ -6,6 +6,7 @@ from typing import Any
 
 _CACHE_ATTR = "_ui_auto_component_cache"
 _GENERATION_ATTR = "_ui_auto_component_generation"
+_SNAPSHOT_CACHE_ATTR = "_ui_auto_snapshot_cache"
 
 
 def _driver_state(driver: Any) -> dict[str, Any]:
@@ -15,6 +16,10 @@ def _driver_state(driver: Any) -> dict[str, Any]:
 
 def _generation(driver: Any) -> int:
     return int(_driver_state(driver).get(_GENERATION_ATTR, 0))
+
+
+def component_generation(driver: Any) -> int:
+    return _generation(driver)
 
 
 def remember_component(driver: Any, selector: Any, component: Any) -> None:
@@ -64,3 +69,4 @@ def invalidate_component_cache(driver: Any) -> None:
     cache = state.get(_CACHE_ATTR)
     if cache is not None:
         cache.clear()
+    state.pop(_SNAPSHOT_CACHE_ATTR, None)

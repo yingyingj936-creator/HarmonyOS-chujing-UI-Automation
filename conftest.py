@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 import time
@@ -91,22 +92,50 @@ FILE_ORDER = {
     "test_trip_delete_card.py": 69,
 }
 
+def _addoption_if_available(
+    parser: pytest.Parser,
+    *opts: str,
+    **attrs: object,
+) -> None:
+    """注册项目参数；若外部 pytest 插件已注册同名参数，则复用已有参数。"""
+    try:
+        parser.addoption(*opts, **attrs)
+    except argparse.ArgumentError as exc:
+        if "conflicting option string" not in str(exc):
+            raise
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
+    _addoption_if_available(
+        parser,
         "--config",
         action="store",
         default=None,
         help="Path to TOML config file. Default: configs/default.toml",
     )
-    parser.addoption(
+    _addoption_if_available(
+        parser,
         "--device",
         action="store",
         default=None,
         help="Override USB device serial. Use 'auto' for the only connected USB device.",
     )
-    parser.addoption("--bundle", action="store", default=None, help="Override bundle")
-    parser.addoption("--ability", action="store", default=None, help="Override ability")
-    parser.addoption(
+    _addoption_if_available(
+        parser,
+        "--bundle",
+        action="store",
+        default=None,
+        help="Override bundle",
+    )
+    _addoption_if_available(
+        parser,
+        "--ability",
+        action="store",
+        default=None,
+        help="Override ability",
+    )
+    _addoption_if_available(
+        parser,
         "--disable-file-order",
         action="store_true",
         default=False,
@@ -298,7 +327,9 @@ def _inspect_home_state(
         '//*[@id="home_recommends_section"]'
     )
     selector = BY.xpath(
-        f"{top_ready_xpath} | {home.SEARCH_BAR_XPATH} | {home.BOTTOM_HOME_TAB_XPATH}"
+        f"{top_ready_xpath} | {home.HOME_ROOT_XPATH} | "
+        f"{home.WATERFALL_SECTION_XPATH} | {home.SEARCH_BAR_XPATH} | "
+        f"{home.BOTTOM_HOME_TAB_XPATH}"
     )
     components = driver.find_all_components(selector)
     if components is None:
@@ -307,6 +338,7 @@ def _inspect_home_state(
         components = [components]
 
     top_ready = False
+    home_surface_visible = False
     search_visible = False
     home_tab = None
     for component in components:
@@ -321,18 +353,27 @@ def _inspect_home_state(
                 and int(bounds.bottom) > int(bounds.top)
                 and int(bounds.bottom) > 0
             )
+            home_surface_visible = top_ready
+        elif component_id in {"TabHomeCompRoot", "home_discovery_section"}:
+            bounds = component.getBounds()
+            home_surface_visible = (
+                int(bounds.right) > int(bounds.left)
+                and int(bounds.bottom) > int(bounds.top)
+            )
         elif text == "首页":
             home_tab = component
         elif "搜索服务" in text or "搜索服务" in hint:
             search_visible = True
+            home_surface_visible = True
         else:
             bounds = component.getBounds()
             search_visible = (
                 int(bounds.right) > int(bounds.left)
                 and int(bounds.bottom) > int(bounds.top)
             )
+            home_surface_visible = home_surface_visible or search_visible
 
-    return top_ready, search_visible and home_tab is not None, home_tab
+    return top_ready, home_surface_visible and home_tab is not None, home_tab
 
 
 def _dismiss_unsaved_edit_dialog_if_present(driver) -> bool:
@@ -399,7 +440,7 @@ def _return_to_home(
                 invalidate_component_cache(driver)
                 if (
                     driver.wait_for_component(
-                        BY.xpath(home.SEARCH_BAR_XPATH),
+                        BY.xpath(home.HOME_ROOT_XPATH),
                         timeout=3,
                     )
                     is not None
@@ -433,14 +474,8 @@ def _restore_default_destination(
     current_destination_xpath = home.region_dropdown_xpath(
         settings.default_destination
     )
-    fallback_xpath = (
-        '//*[@id="TabHomeCompRoot"]//Text'
-        '[contains(@text, "香港") or contains(@text, "港澳")]'
-        if settings.default_destination == "中国香港"
-        else current_destination_xpath
-    )
     current_components = driver.find_all_components(
-        BY.xpath(f"{current_destination_xpath} | {fallback_xpath}")
+        BY.xpath(current_destination_xpath)
     )
     if current_components:
         return True, False
@@ -463,8 +498,9 @@ def _prepare_home(driver, settings: AppSettings) -> bool:
         return True
     if not _return_to_home(driver, settings, initial_state=state):
         return False
-    if not _restore_home_top(driver):
-        return False
+    if not _inspect_home_state(driver, settings)[0]:
+        if not _restore_home_top(driver):
+            return False
     destination_restored, destination_changed = _restore_default_destination(
         driver,
         settings,
@@ -480,7 +516,7 @@ def _restore_home_top(driver) -> bool:
     """回到首页后统一恢复到顶部，避免上个用例的滚动位置污染金刚区/目的地用例。"""
     home = OutboundHomePage(driver)
     try:
-        home.restore_top(max_swipes=18)
+        home.restore_top(max_swipes=14)
         return True
     except Exception:
         return False
@@ -550,3 +586,20 @@ def pytest_collection_modifyitems(
         key=lambda pair: (FILE_ORDER.get(_item_filename(pair[1]), 999), pair[0])
     )
     items[:] = [item for _, item in indexed_items]
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
+    reports = []
+    for outcome in ("passed", "failed", "skipped"):
+        for report in terminalreporter.stats.get(outcome, []):
+            if getattr(report, "when", None) == "call":
+                reports.append(report)
+    if not reports:
+        return
+
+    reports.sort(key=lambda report: report.duration, reverse=True)
+    terminalreporter.write_sep("=", "最慢用例 Top 10")
+    for report in reports[:10]:
+        terminalreporter.write_line(
+            f"{report.duration:7.2f}s {report.outcome:<7} {report.nodeid}"
+        )

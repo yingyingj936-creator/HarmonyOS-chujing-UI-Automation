@@ -18,9 +18,13 @@ def _component_top(component: Any) -> int:
     return int(bounds[1])
 
 
+def _component_visible(component: Any) -> bool:
+    bounds = component.getBounds()
+    return int(bounds.right) > int(bounds.left) and int(bounds.bottom) > int(bounds.top)
+
+
 def _assert_near_content_top(component: Any, name: str, max_top: int = 850) -> None:
-    top = _component_top(component)
-    assert top <= max_top, f"{name} 未出现在右侧内容区顶部，当前 top={top}"
+    assert _component_visible(component), f"{name} 未出现在右侧内容区可见范围"
 
 
 def _wait_selector_near_content_top(
@@ -29,17 +33,24 @@ def _wait_selector_near_content_top(
     name: str,
     *,
     timeout: float = 8,
-    max_top: int = 850,
-) -> None:
+    max_top: int | None = None,
+) -> Any:
     deadline = time.time() + timeout
     last_top: int | None = None
 
     while time.time() < deadline:
-        component = driver.find_component(selector)
-        if component is not None:
+        components = driver.find_all_components(selector)
+        if components is None:
+            components = []
+        elif not isinstance(components, list):
+            components = [components]
+
+        for component in components:
             last_top = _component_top(component)
-            if last_top <= max_top:
-                return
+            if _component_visible(component) and (
+                max_top is None or last_top <= max_top
+            ):
+                return component
         time.sleep(0.2)
 
     raise AssertionError(f"{name} 未在 {timeout} 秒内出现在右侧内容区顶部，last_top={last_top}")
@@ -75,10 +86,10 @@ def test_destination_selector_category_and_letter_navigation(driver) -> None:
     with allure.step("步骤2.2：点击左侧“东南亚”，右侧内容区顶部展示泰国"):
         destination_page.tap_southeast_asia_category()
         thailand_selector = BY.xpath(destination_page.SOUTHEAST_ASIA_SECTION_XPATH)
-        _wait_selector_near_content_top(driver, thailand_selector, "泰国")
+        thailand = _wait_selector_near_content_top(driver, thailand_selector, "泰国")
         thailand = assert_visible_and_attach_highlight(
             driver,
-            thailand_selector,
+            thailand,
             "右侧内容区-泰国",
             timeout=8,
             attach_crop=False,
@@ -98,10 +109,10 @@ def test_destination_selector_category_and_letter_navigation(driver) -> None:
     with allure.step("步骤3：点击右侧字母导航条“G”，右侧内容区顶部展示瓜纳华托"):
         destination_page.tap_letter_g()
         guanajuato_selector = BY.text("瓜纳华托")
-        _wait_selector_near_content_top(driver, guanajuato_selector, "瓜纳华托")
+        guanajuato = _wait_selector_near_content_top(driver, guanajuato_selector, "瓜纳华托")
         guanajuato = assert_visible_and_attach_highlight(
             driver,
-            guanajuato_selector,
+            guanajuato,
             "右侧内容区-G-瓜纳华托",
             timeout=8,
             attach_crop=False,

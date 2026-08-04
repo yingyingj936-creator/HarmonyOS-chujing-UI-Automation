@@ -1,6 +1,7 @@
 import allure
 from hypium import BY
 
+from pages.ai_chat import AiChatPage
 from pages.outbound_search import OutboundSearchPage
 from pages.poi_detail import PoiDetailPage
 from pages.post_detail import PostDetailPage
@@ -21,6 +22,7 @@ MINIMUM_GUIDE_INDEX = 25
 @allure.story("搜索结果分组跳转")
 def test_search_result_group_navigation(driver) -> None:
     """验证搜索结果AI总结、各分组内容及深分页攻略均可进入对应详情页。"""
+    ai_chat = AiChatPage(driver)
     search_page = OutboundSearchPage(driver)
     service_page = ServiceDetailPage(driver)
     route_page = RouteDetailPage(driver)
@@ -63,7 +65,23 @@ def test_search_result_group_navigation(driver) -> None:
             attach_crop=False,
         )
 
-    with allure.step("步骤3.1：点击服务“香港迪士尼”，进入服务详情页"):
+    with allure.step("步骤3：点击AI总结“查看详情”，校验进入AI对话页"):
+        search_page.tap_ai_summary_detail(timeout=8)
+        ai_ready = ai_chat.wait_loaded(
+            previous_root_xpath=search_page.RESULT_ROOT_XPATH,
+            timeout=15,
+        )
+        assert_visible_and_attach_highlight(
+            driver,
+            ai_ready,
+            "AI对话页-搜索查看详情",
+            timeout=8,
+            attach_crop=False,
+        )
+        ai_chat.press_system_back()
+        search_page.wait_result_loaded(timeout=10)
+
+    with allure.step("步骤4.1：点击服务“香港迪士尼”，进入服务详情页"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(search_page.result_item_xpath(SERVICE_NAME)),
@@ -85,7 +103,7 @@ def test_search_result_group_navigation(driver) -> None:
         service_page.press_system_back()
         search_page.wait_result_loaded(timeout=10)
 
-    with allure.step("步骤3.2：点击路线“香港经典一日游”，进入路线详情页"):
+    with allure.step("步骤4.2：点击路线“香港经典一日游”，进入路线详情页"):
         assert_visible_and_attach_highlight(
             driver,
             BY.xpath(search_page.result_item_xpath(ROUTE_NAME)),
@@ -107,7 +125,7 @@ def test_search_result_group_navigation(driver) -> None:
         route_page.tap_back_button()
         search_page.wait_result_loaded(timeout=10)
 
-    with allure.step("步骤3.3：点击地点“香港大会堂”，进入地点详情页"):
+    with allure.step("步骤4.3：点击地点“香港大会堂”，进入地点详情页"):
         search_page.browse_result_group_to_right_until_visible(
             3,
             PLACE_NAME,
@@ -135,7 +153,7 @@ def test_search_result_group_navigation(driver) -> None:
         search_page.wait_result_loaded(timeout=10)
 
     with allure.step(
-        "步骤3.4：连续向下滑动最新攻略，点击至少第25篇之后的帖子"
+        "步骤4.4：连续向下滑动最新攻略，点击至少第25篇之后的帖子"
     ):
         search_page.scroll_result_text_into_view("最新攻略")
         title_xpath, browsed_count, swipe_count = (

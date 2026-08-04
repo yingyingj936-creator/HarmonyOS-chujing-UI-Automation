@@ -18,14 +18,18 @@ def _return_from_service_to_poi_detail(
     poi_detail: PoiDetailPage,
     poi_name: str,
 ) -> None:
-    """从关联元服务返回 POI 详情，优先系统返回，不成功再使用侧滑返回。"""
-    driver.press_back()
-    time.sleep(1.5)
-    if driver.wait_for_component(BY.xpath(poi_detail.title_xpath(poi_name)), timeout=4):
-        return
+    """从关联元服务返回 POI 详情，逐次返回并确认，避免服务页返回动画未完成导致误判。"""
+    title_selector = BY.xpath(poi_detail.title_xpath(poi_name))
+    for index in range(4):
+        if driver.wait_for_component(title_selector, timeout=1.5):
+            return
+        if index == 0:
+            driver.press_back()
+        else:
+            poi_detail.system_gesture_back()
+        time.sleep(1.5)
 
-    poi_detail.system_gesture_back()
-    poi_detail.wait_detail_present(poi_name, timeout=8)
+    poi_detail.wait_detail_present(poi_name, timeout=10)
 
 
 @allure.feature("出境服务")
@@ -129,9 +133,10 @@ def test_nearby_poi_recommendation_review_and_locate(driver) -> None:
             attach_crop=False,
         )
         poi_detail.tap_review_service()
+        service_marker = poi_detail.wait_review_service_loaded(timeout=15)
         assert_visible_and_attach_highlight(
             driver,
-            BY.xpath(poi_detail.SERVICE_TITLE_XPATH),
+            service_marker,
             "看点评服务页标题",
             timeout=12,
             attach_crop=False,
